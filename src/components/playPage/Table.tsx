@@ -584,8 +584,11 @@ const Table = React.memo(() => {
     const balanceFormatted = useMemo(() => (accountBalance ? formatUSDCToSimpleDollars(accountBalance) : "0.00"), [accountBalance]);
 
     const potDisplayValues = useMemo(() => {
+        // pots[0] = main pot (completed rounds only)
+        // totalPot = live total (main pot + current round bets)
         const pots = Array.isArray(gameState?.pots) ? (gameState?.pots as string[]) : [];
-        const totalPotWei = pots.reduce<bigint>((sum, pot) => sum + BigInt(pot), 0n);
+        const mainPotRaw = pots.length > 0 ? BigInt(pots[0]) : 0n;
+        const totalPotRaw = gameState?.totalPot ? BigInt(gameState.totalPot) : mainPotRaw;
 
         // Check if this is a tournament-style game
         const isTournamentStyle = isTournamentFormat(gameFormat) || isSitAndGoFormat(gameFormat);
@@ -595,12 +598,12 @@ const Table = React.memo(() => {
 
         if (isTournamentStyle) {
             // Tournament: pot is chip count, display with commas
-            totalPotCalculated = totalPotWei === 0n ? "0" : formatChipCount(Number(totalPotWei));
-            mainPotCalculated = pots.length === 0 ? "0" : formatChipCount(Number(pots[0]));
+            totalPotCalculated = totalPotRaw === 0n ? "0" : formatChipCount(Number(totalPotRaw));
+            mainPotCalculated = mainPotRaw === 0n ? "0" : formatChipCount(Number(mainPotRaw));
         } else {
             // Cash game: pot is USDC microunits, convert to dollars
-            totalPotCalculated = totalPotWei === 0n ? "0.00" : formatUSDCToSimpleDollars(totalPotWei.toString());
-            mainPotCalculated = pots.length === 0 ? "0.00" : formatUSDCToSimpleDollars(pots[0]);
+            totalPotCalculated = totalPotRaw === 0n ? "0.00" : formatUSDCToSimpleDollars(totalPotRaw.toString());
+            mainPotCalculated = mainPotRaw === 0n ? "0.00" : formatUSDCToSimpleDollars(mainPotRaw.toString());
         }
 
         return {
@@ -608,7 +611,7 @@ const Table = React.memo(() => {
             mainPot: mainPotCalculated,
             isTournamentStyle
         };
-    }, [gameState?.pots, gameFormat]);
+    }, [gameState?.pots, gameState?.totalPot, gameFormat]);
 
 
 

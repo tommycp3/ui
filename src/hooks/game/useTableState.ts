@@ -38,14 +38,13 @@ export const useTableState = (): TableStateReturn => {
     }
 
     try {
-        // Calculate the total pot from all pots
+        // Use totalPot from game state (main pot + current round bets)
+        // Falls back to pots[0] (main pot) if totalPot not available
         let totalPotWei = "0";
-        if (gameState.pots && Array.isArray(gameState.pots)) {
-            totalPotWei = gameState.pots.reduce((sum: string, pot: string) => {
-                const sumBigInt = BigInt(sum);
-                const potBigInt = BigInt(pot);
-                return (sumBigInt + potBigInt).toString();
-            }, "0");
+        if (gameState.totalPot) {
+            totalPotWei = gameState.totalPot;
+        } else if (gameState.pots && Array.isArray(gameState.pots) && gameState.pots.length > 0) {
+            totalPotWei = gameState.pots[0];
         }
 
         // Format total pot value to display format
