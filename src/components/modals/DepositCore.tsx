@@ -37,7 +37,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({
     const USDC_ADDRESS = ETH_USDC_ADDRESS;
     const BRIDGE_ADDRESS = COSMOS_BRIDGE_ADDRESS;
 
-    const { open, disconnect, isConnected, address } = useUserWalletConnect();
+    const { open, isConnected, address } = useUserWalletConnect();
     const { deposit, isDepositPending, isDepositConfirmed, isPending, depositError } = useDepositUSDC();
     const { isApprovePending, isApproveConfirmed, isLoading, approve, approveError } = useApprove();
     const [amount, setAmount] = useState<string>("0");
@@ -141,7 +141,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                 console.error("Deposit failed:", err);
             }
         } else {
-            console.error("Insufficient allowance. Please activate USDC deposits first.");
+            console.error("Insufficient allowance. Please approve deposit first.");
         }
     };
 
@@ -208,7 +208,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                     {showMethodSelector && (
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-400 mb-3">
-                                Deposit Method
+                                Select a deposit method
                             </label>
                             <div className="grid grid-cols-2 gap-3">
                                 <button
@@ -233,10 +233,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                                             Pay with Crypto
                                         </div>
                                         <div className="text-xs text-gray-400 mt-1">
-                                            BTC, ETH, USDT & more
-                                        </div>
-                                        <div className="mt-2 px-2 py-1 rounded text-xs font-semibold" style={{ backgroundColor: hexToRgba(colors.accent.success, 0.2), color: colors.accent.success }}>
-                                            Recommended
+                                            BTC or USDT
                                         </div>
                                     </div>
                                 </button>
@@ -259,10 +256,10 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                                     <div className="text-center">
                                         <div className="text-2xl mb-1">$</div>
                                         <div className="text-sm font-semibold text-white">
-                                            Direct USDC
+                                            Deposit via Web3
                                         </div>
                                         <div className="text-xs text-gray-400 mt-1">
-                                            Ethereum USDC
+                                            USDC (ERC20)
                                         </div>
                                     </div>
                                 </button>
@@ -295,42 +292,18 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                                 <p className="text-xs text-gray-400 mt-2">
                                     Minimum: $10 USD
                                 </p>
-                                {/* Fee estimate - shows as user types */}
                                 {+amount >= 10 && (
                                     <div className="mt-3 p-2 rounded bg-gray-800/50 text-xs">
-                                        <div className="flex justify-between text-gray-500">
-                                            <span>Network fee (~2.9%)</span>
-                                            <span>-${(+amount * 0.029).toFixed(2)}</span>
+                                        <div className="flex justify-between text-gray-300 font-medium">
+                                            <span>You receive</span>
+                                            <span className="text-green-400">${(+amount).toFixed(2)} USDC</span>
                                         </div>
-                                        <div className="flex justify-between text-gray-300 mt-1 font-medium">
-                                            <span>You receive in Block52 wallet</span>
-                                            <span className="text-green-400">${(+amount * 0.971).toFixed(2)} USDC</span>
-                                        </div>
-                                        <p className="text-gray-600 text-[10px] mt-2 italic">
-                                            *Estimate only. Actual fees at market rate. Funds arrive in your Block52 browser wallet, usually within 5-30 mins.
-                                        </p>
-                                        <p className="text-gray-500 text-[10px] mt-1">
-                                            You'll see the exact {selectedCurrency.toUpperCase()} amount to send when you create the payment.
-                                        </p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Create Payment Button */}
-                            <button
-                                onClick={handleCreateCryptoPayment}
-                                className={`w-full py-3 rounded-lg text-white font-semibold transition-all hover:opacity-90 flex items-center justify-center gap-3 ${
-                                    +amount < 10 || creatingPayment ? "opacity-50 cursor-not-allowed" : ""
-                                }`}
-                                style={buttonStyle(colors.accent.success)}
-                                disabled={+amount < 10 || creatingPayment}
-                            >
-                                {creatingPayment ? "Creating Payment..." : "Create Payment"}
-                                {creatingPayment && <img src={spinner} className="w-5 h-5" alt="loading" />}
-                            </button>
-
                             {/* Info Box */}
-                            <div className="mt-4 p-3 rounded-lg bg-blue-900/20 border border-blue-500/50 text-blue-400 text-xs">
+                            <div className="mb-4 p-3 rounded-lg bg-blue-900/20 border border-blue-500/50 text-blue-400 text-xs">
                                 <p className="font-semibold mb-1">How it works:</p>
                                 <ol className="list-decimal list-inside space-y-1 text-blue-400/80">
                                     <li>Select your cryptocurrency</li>
@@ -339,17 +312,32 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                                     <li>Funds auto-convert to USDC and appear in your wallet</li>
                                 </ol>
                             </div>
+
+                            {/* Deposit Button */}
+                            <button
+                                onClick={handleCreateCryptoPayment}
+                                className={`w-full py-3 rounded-lg text-white font-semibold transition-all hover:opacity-90 flex items-center justify-center gap-3 ${
+                                    +amount < 10 || creatingPayment ? "opacity-50 cursor-not-allowed" : ""
+                                }`}
+                                style={buttonStyle(colors.accent.success)}
+                                disabled={+amount < 10 || creatingPayment}
+                            >
+                                {creatingPayment ? "Processing..." : "Deposit Now"}
+                                {creatingPayment && <img src={spinner} className="w-5 h-5" alt="loading" />}
+                            </button>
                         </>
                     ) : (
                         <>
                             {/* USDC Direct Deposit Flow */}
-                            <button
-                                className="w-full py-3 rounded-lg text-white font-semibold mb-4 transition-all hover:opacity-90"
-                                style={buttonStyle(isConnected ? colors.accent.withdraw : colors.brand.primary)}
-                                onClick={isConnected ? disconnect : open}
-                            >
-                                {isConnected ? "Disconnect Wallet" : "Connect Your Web3 Wallet"}
-                            </button>
+                            {!isConnected && (
+                                <button
+                                    className="w-full py-3 rounded-lg text-white font-semibold mb-4 transition-all hover:opacity-90"
+                                    style={buttonStyle(colors.brand.primary)}
+                                    onClick={open}
+                                >
+                                    Connect Your Web3 Wallet
+                                </button>
+                            )}
 
                             {address && (
                                 <div className="mb-4 p-3 rounded-lg bg-gray-900 border border-gray-700">
@@ -425,7 +413,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                                     style={buttonStyle(colors.brand.primary)}
                                     disabled={+amount === 0 || isApprovePending || isLoading}
                                 >
-                                    {isLoading || isApprovePending ? "Activating..." : "Activate USDC Deposits"}
+                                    {isLoading || isApprovePending ? "Approving..." : "Approve Deposit"}
                                     {(isLoading || isApprovePending) && <img src={spinner} className="w-5 h-5" alt="loading" />}
                                 </button>
                             )}

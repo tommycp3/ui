@@ -13,8 +13,8 @@ interface QRCodeDisplayProps {
  */
 export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     depositAddress,
-    title = "Pay with USDC ERC20",
-    subtitle = "Only send USDC using the Ethereum network"
+    title = "USDT",
+    subtitle = "Tether"
 }) => {
     const copyToClipboard = useCallback((text: string) => {
         navigator.clipboard.writeText(text);

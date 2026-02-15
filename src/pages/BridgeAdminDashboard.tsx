@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
 import useCosmosWallet from "../hooks/wallet/useCosmosWallet";
 import { useNetwork } from "../context/NetworkContext";
 import { toast } from "react-toastify";
@@ -520,21 +519,9 @@ export default function BridgeAdminDashboard() {
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-yellow-200 font-semibold mb-1">Insufficient STAKE for Gas Fees</h3>
-                                <p className="text-yellow-300/80 text-sm mb-3">
+                                <p className="text-yellow-300/80 text-sm">
                                     You need STAKE tokens to pay for gas fees when processing deposits.
                                     Your current balance is <strong>{stakeBalanceFormatted} STAKE</strong>.
-                                </p>
-                                <Link
-                                    to="/faucet"
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Get STAKE from Faucet
-                                </Link>
-                                <p className="text-gray-500 text-xs mt-2">
-                                    The faucet provides free STAKE tokens for gas fees on the testnet.
                                 </p>
                             </div>
                         </div>

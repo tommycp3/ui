@@ -216,7 +216,7 @@ const QRDeposit: React.FC = () => {
                 checkout: {
                     speedPolicy: "HighSpeed",
                     defaultPaymentMethod: "BTC-CHAIN",
-                    lazyPaymentMethods: true,
+                    lazyPaymentMethods: false,
                     expirationMinutes: 90,
                     monitoringMinutes: 90,
                     paymentTolerance: 0,
@@ -269,7 +269,7 @@ const QRDeposit: React.FC = () => {
                 checkout: {
                     speedPolicy: "HighSpeed",
                     defaultPaymentMethod: "BTC-CHAIN",
-                    lazyPaymentMethods: true,
+                    lazyPaymentMethods: false,
                     expirationMinutes: 90,
                     monitoringMinutes: 90,
                     paymentTolerance: 0,

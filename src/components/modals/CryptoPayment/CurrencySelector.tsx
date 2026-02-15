@@ -6,35 +6,22 @@ import spinner from "../../../assets/spinning-circles.svg";
 
 interface Currency {
     symbol: string;
+    displaySymbol: string;
     name: string;
     logo?: string;
 }
 
 import type { CurrencySelectorProps } from "../types";
 
-// Simplified list: BTC, USDT, and ETH - shown by default
-const SIMPLIFIED_CURRENCIES = [
-    { symbol: "btc", name: "Bitcoin", logo: "₿" },
-    { symbol: "usdterc20", name: "USDT (Ethereum)", logo: "₮" },
-    { symbol: "eth", name: "Ethereum", logo: "Ξ" }
-];
-
-// Full list of popular currencies - shown when toggle is on
-const ALL_CURRENCIES = [
-    { symbol: "btc", name: "Bitcoin", logo: "₿" },
-    { symbol: "usdterc20", name: "USDT (Ethereum)", logo: "₮" },
-    { symbol: "eth", name: "Ethereum", logo: "Ξ" },
-    { symbol: "ltc", name: "Litecoin", logo: "Ł" },
-    { symbol: "doge", name: "Dogecoin", logo: "Ð" },
-    { symbol: "bnb", name: "BNB", logo: "BNB" },
-    { symbol: "ada", name: "Cardano", logo: "₳" },
-    { symbol: "xrp", name: "XRP", logo: "XRP" }
+// Only BTC and USDT supported
+const SUPPORTED_CURRENCIES: Currency[] = [
+    { symbol: "btc", displaySymbol: "BTC", name: "Bitcoin", logo: "₿" },
+    { symbol: "usdterc20", displaySymbol: "USDT", name: "Tether", logo: "₮" }
 ];
 
 const CurrencySelector: React.FC<CurrencySelectorProps> = ({ selectedCurrency, onCurrencySelect }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showMoreCurrencies, setShowMoreCurrencies] = useState(false);
 
     useEffect(() => {
         fetchCurrencies();
@@ -56,9 +43,6 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({ selectedCurrency, o
         }
     };
 
-    // Show simplified or all currencies based on toggle
-    const displayedCurrencies = showMoreCurrencies ? ALL_CURRENCIES : SIMPLIFIED_CURRENCIES;
-
     if (loading) {
         return (
             <div className="flex items-center justify-center py-8">
@@ -77,31 +61,13 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({ selectedCurrency, o
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-400">
-                    Select Cryptocurrency
-                </label>
-                {/* More options toggle */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-xs text-gray-500">More options</span>
-                    <div
-                        className={`relative w-8 h-4 rounded-full transition-colors ${
-                            showMoreCurrencies ? "bg-blue-600" : "bg-gray-600"
-                        }`}
-                        onClick={() => setShowMoreCurrencies(!showMoreCurrencies)}
-                    >
-                        <div
-                            className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                                showMoreCurrencies ? "translate-x-4" : "translate-x-0.5"
-                            }`}
-                        />
-                    </div>
-                </label>
-            </div>
+            <label className="block text-sm font-medium text-gray-400">
+                Select the Crypto Currency to deposit
+            </label>
 
             {/* Currency Grid */}
             <div className="grid grid-cols-2 gap-3">
-                {displayedCurrencies.map((currency) => (
+                {SUPPORTED_CURRENCIES.map((currency) => (
                     <button
                         key={currency.symbol}
                         onClick={() => onCurrencySelect(currency.symbol)}
@@ -123,7 +89,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({ selectedCurrency, o
                             <span className="text-2xl">{currency.logo}</span>
                             <div className="text-left flex-1">
                                 <div className="text-white font-semibold uppercase text-sm">
-                                    {currency.symbol}
+                                    {currency.displaySymbol}
                                 </div>
                                 <div className="text-gray-400 text-xs">{currency.name}</div>
                             </div>

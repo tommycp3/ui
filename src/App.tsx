@@ -23,7 +23,6 @@ import WithdrawalDashboard from "./pages/WithdrawalDashboard";
 import TableAdminPage from "./pages/TableAdminPage";
 import GenesisState from "./pages/GenesisState";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import FaucetPage from "./pages/FaucetPage";
 import NodeStatusPage from "./pages/NodeStatusPage";
 import NodesPage from "./pages/NodesPage";
 import { TestSdk } from "./test-sdk";
@@ -98,7 +97,6 @@ function AppContent() {
                 <Route path="/explorer/address/:address" element={<AddressPage />} />
                 <Route path="/explorer/accounts" element={<AllAccountsPage />} />
                 <Route path="/explorer/distribution" element={<DistributionPage />} />
-                <Route path="/faucet" element={<FaucetPage />} />
                 <Route path="/nodes" element={<NodesPage />} />
                 <Route path="/node/:name" element={<NodeStatusPage />} />
                 <Route path="/" element={<Dashboard />} />

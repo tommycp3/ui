@@ -67,10 +67,10 @@ export const Web3DepositSection: React.FC<Web3DepositSectionProps> = ({
                         </svg>
                         <div>
                             <h2 className="text-lg font-bold" style={{ color: "white" }}>
-                                Method 2: Web3 Wallet Direct Deposit
+                                USDC via Web3 Wallet
                             </h2>
                             <p className="text-xs" style={{ color: colors.ui.textSecondary }}>
-                                Pay with USDC • Direct from your wallet
+                                Metamask, Coinbase Wallet, etc.
                             </p>
                         </div>
                     </div>

@@ -4,6 +4,8 @@ import { colors, hexToRgba } from "../utils/colorConfig";
 import { useCosmosWallet, useUserWalletConnect } from "../hooks";
 import { microToUsdc, formatMicroAsUsdc } from "../constants/currency";
 
+// Note: STAKE balance display kept for gas monitoring (users still need to see their gas balance)
+
 // Copy to clipboard utility
 const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -33,12 +35,6 @@ const WalletPanel: React.FC<WalletPanelProps> = ({
     const navigate = useNavigate();
     const cosmosWallet = useCosmosWallet();
     const { isConnected: isWeb3Connected, open: openWeb3Modal, disconnect: disconnectWeb3, address: web3Address } = useUserWalletConnect();
-
-    // Check if has STAKE balance for gas
-    const hasStakeBalance = useMemo(() => {
-        const stakeBalance = cosmosWallet.balance.find(b => b.denom === "stake");
-        return stakeBalance && parseInt(stakeBalance.amount) > 0;
-    }, [cosmosWallet.balance]);
 
     // Get USDC balance (formatted to 2 decimal places)
     const usdcBalance = useMemo(() => {
@@ -101,28 +97,6 @@ const WalletPanel: React.FC<WalletPanelProps> = ({
             <div className="px-6 py-4 bg-gray-900 border-b border-gray-700 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white">Game Wallet</h2>
                 <div className="flex items-center gap-2">
-                    {/* Faucet Button - shows when no STAKE balance */}
-                    {!hasStakeBalance && (
-                        <button
-                            onClick={() => navigate("/faucet")}
-                            className="p-2 rounded-lg transition-all hover:bg-gray-700 hover:opacity-90"
-                            title="Get free STAKE for gas fees"
-                        >
-                            <svg
-                                className="w-5 h-5 text-amber-400 hover:text-amber-300 transition-colors"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                                />
-                            </svg>
-                        </button>
-                    )}
                     {/* Settings Button */}
                     <button
                         onClick={() => navigate("/wallet")}
@@ -246,7 +220,7 @@ const WalletPanel: React.FC<WalletPanelProps> = ({
                             </div>
                             <button
                                 onClick={disconnectWeb3}
-                                className="w-full py-2 rounded-lg text-sm font-medium transition-all hover:opacity-90 border border-gray-600 text-gray-300 hover:bg-gray-700"
+                                className="w-full py-2 rounded-lg text-sm font-medium transition-all hover:opacity-90 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white"
                             >
                                 Disconnect
                             </button>
@@ -263,21 +237,6 @@ const WalletPanel: React.FC<WalletPanelProps> = ({
                             Connect Web3 Wallet
                         </button>
                     )}
-                    <p className="text-gray-500 text-xs mt-2">Required for USDC deposits from Ethereum</p>
-                </div>
-
-                {/* Bridge Link */}
-                <div className="mt-4 pt-4 border-t border-gray-700">
-                    <button
-                        onClick={() => navigate("/deposit")}
-                        className="w-full text-center text-sm transition-all hover:opacity-90 flex items-center justify-center gap-2"
-                        style={{ color: colors.brand.primary }}
-                    >
-                        <span>Bridge from Ethereum</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </button>
                 </div>
             </div>
         </div>
