@@ -30,7 +30,7 @@ import { useEffect } from "react";
 import FaviconSetter from "./components/FaviconSetter";
 import { GlobalHeader } from "./components/GlobalHeader";
 import { ProfileAvatarProvider } from "./context/profile/ProfileAvatarContext";
-import { ProfileAvatarDrawer } from "./components/profile";
+import { ProfileAvatarModal } from "./components/profile";
 
 const queryClient = new QueryClient();
 
@@ -67,7 +67,7 @@ function AppContent() {
         <div className="bg-[#2c3245] min-h-screen">
             <FaviconSetter />
             <GlobalHeader />
-            <ProfileAvatarDrawer />
+            <ProfileAvatarModal />
             <Routes>
                 <Route path="/test-sdk" element={<TestSdk />} />
                 <Route path="/table/:id" element={<Table />} />
