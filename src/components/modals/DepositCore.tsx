@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import * as React from "react";
 import axios from "axios";
 import useUserWalletConnect from "../../hooks/wallet/useUserWalletConnect";
@@ -20,6 +20,7 @@ import { formatUSDCToSimpleDollars, convertAmountToBigInt } from "../../utils/nu
 import CurrencySelector from "./CryptoPayment/CurrencySelector";
 import PaymentDisplay from "./CryptoPayment/PaymentDisplay";
 import PaymentStatusMonitor from "./CryptoPayment/PaymentStatusMonitor";
+import { useProfileAvatar } from "../../context/profile/ProfileAvatarContext";
 import styles from "./DepositCore.module.css";
 
 type DepositMethod = "crypto" | "usdc";
@@ -74,6 +75,12 @@ const DepositCore: React.FC<DepositCoreProps> = ({
     }, [allowance]);
 
     useEffect(() => {
+        if (isConnected && address) {
+            refreshWalletNfts();
+        }
+    }, [isConnected, address, refreshWalletNfts]);
+
+    useEffect(() => {
         if (isDepositConfirmed) {
             toast.success(`Deposit successful! ${selectedToken} sent to your game wallet.`, { autoClose: 5000 });
             setAmount("0");
@@ -81,7 +88,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({
             cosmosWallet.refreshBalance();
             if (onSuccess) onSuccess();
         }
-    }, [isDepositConfirmed, tmpDepositAmount, cosmosWallet, onSuccess]);
+    }, [isDepositConfirmed, selectedToken, tmpDepositAmount, cosmosWallet, onSuccess]);
 
     const [approvalToastShown, setApprovalToastShown] = React.useState(false);
 
@@ -100,7 +107,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({
                 setApprovalToastShown(true);
             }
         }
-    }, [isApproveConfirmed, tmpWalletAllowance, approvalToastShown, isResettingAllowance]);
+    }, [isApproveConfirmed, approvalToastShown, isResettingAllowance, tmpWalletAllowance, selectedToken, approve, tokenAddress, BRIDGE_ADDRESS]);
 
     useEffect(() => {
         if (isLoading || isApprovePending) {
