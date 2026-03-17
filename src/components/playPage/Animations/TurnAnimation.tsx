@@ -10,8 +10,7 @@ const TurnAnimation: React.FC<TurnAnimationProps> = React.memo(({ index }) => {
     const { seat: nextToActSeat } = useNextToActInfo();
     const [isCurrentPlayersTurn, setIsCurrentPlayersTurn] = useState(false);
     
-    // Use the table layout hook to get proper positions for 4 or 9 players only
-    const tableLayout = useTableLayout(tableSize as 4 | 9 || 9);
+    const tableLayout = useTableLayout(tableSize as 2 | 6 | 9 || 9);
     
     // Get position directly without memoization to ensure updates are reflected
     const positions = tableLayout.positions.turnAnimations;

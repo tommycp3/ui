@@ -297,12 +297,6 @@ export interface TableStateReturn extends BaseHookReturn {
     roundType: TexasHoldemRound;
 }
 
-// Type for the return value of useChipPositions hook
-export interface ChipPositionsReturn {
-    chipPositionArray: PositionArray[];
-    tableSize: number;
-}
-
 // Type for the return value of useDealerPosition hook
 export interface DealerPositionReturn extends BaseHookReturn {
     dealerButtonPosition: { left: string; top: string };

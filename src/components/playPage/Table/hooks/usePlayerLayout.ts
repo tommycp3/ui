@@ -16,7 +16,7 @@ import { UsePlayerLayoutReturn } from "../types";
 
 export const usePlayerLayout = (): UsePlayerLayoutReturn => {
     const { tableSize } = useTableState();
-    const tableLayout = useTableLayout((tableSize as 4 | 9) || 9);
+    const tableLayout = useTableLayout((tableSize as 2 | 6 | 9) || 9);
     const { tableDataPlayers } = useTableData();
     const { currentUserSeat } = usePlayerSeatInfo();
 
@@ -41,6 +41,6 @@ export const usePlayerLayout = (): UsePlayerLayoutReturn => {
     return {
         playerPositions,
         currentUserSeat,
-        tableSize: (tableSize as 4 | 9) || 9
+        tableSize: (tableSize as 2 | 6 | 9) || 9
     };
 };

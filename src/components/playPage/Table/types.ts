@@ -119,5 +119,5 @@ export interface UsePlayerLayoutReturn {
         isCurrentUser: boolean;
     }>;
     currentUserSeat: number | null;
-    tableSize: 4 | 9;
+    tableSize: 2 | 6 | 9;
 }

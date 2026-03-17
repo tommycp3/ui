@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { useParams } from "react-router-dom";
 import { useTableAnimations } from "../../../hooks/animations/useTableAnimations";
 import { useWinnerInfo } from "../../../hooks/game/useWinnerInfo";
-import { winAnimationPosition } from "../../../utils/PositionArray";
+import { useTableLayout } from "../../../hooks/game/useTableLayout";
 import { WinAnimationProps } from "../../../types/index";
 import "./WinAnimation.css";
 
@@ -10,20 +10,9 @@ const WinAnimation: React.FC<WinAnimationProps> = React.memo(({ index }) => {
     const { id: _id } = useParams<{ id: string }>();
     const { tableSize } = useTableAnimations();
     const { winnerInfo } = useWinnerInfo();
+    const tableLayout = useTableLayout(tableSize as 2 | 6 | 9 || 9);
 
-    // Determine position based on table size
-    const position = useMemo(() => {
-        switch (tableSize) {
-            case 9:
-                return winAnimationPosition.nine[index];
-            case 6:
-                return winAnimationPosition.six[index];
-            case 2:
-                return winAnimationPosition.two[index];
-            default:
-                return undefined;
-        }
-    }, [tableSize, index]);
+    const position = tableLayout.positions.winAnimations?.[index];
 
     // Only render for the winner
     const isWinner = !!winnerInfo?.some(w => w.seat === index + 1);

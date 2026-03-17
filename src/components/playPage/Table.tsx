@@ -46,9 +46,6 @@
 import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { isSitAndGoFormat, isTournamentFormat } from "../../utils/gameFormatUtils";
 import { formatPotDisplay, formatChipCount } from "../../utils/potDisplayUtils";
-// Position arrays now come from useTableLayout hook
-// // Position arrays now come from useTableLayout hook
-// import { playerPosition, dealerPosition, vacantPlayerPosition } from "../../utils/PositionArray";
 import PokerActionPanel from "../Footer";
 
 // Extracted Table components
@@ -81,7 +78,6 @@ import { usePlayerSeatInfo } from "../../hooks/player/usePlayerSeatInfo"; // Pro
 import { useNextToActInfo } from "../../hooks/game/useNextToActInfo";
 
 //2. Visual Position/State Providers
-import { useChipPositions } from "../../hooks/animations/useChipPositions";
 import { usePlayerChipData } from "../../hooks/player/usePlayerChipData";
 
 //3. Game State Providers
@@ -112,7 +108,7 @@ import { useGameStartCountdown } from "../../hooks/game/useGameStartCountdown";
 // Table Layout Configuration
 import { useTableLayout } from "../../hooks/game/useTableLayout";
 import { useVacantSeatData } from "../../hooks/game/useVacantSeatData";
-import { getViewportMode } from "../../config/tableLayoutConfig";
+import { getViewportMode } from "../../config/stageGeometry";
 
 // Turn Notification
 import { useTurnNotification } from "../../hooks/notifications/useTurnNotification";
@@ -272,9 +268,7 @@ const Table = React.memo(() => {
     // Add the useTableState hook to get table state properties
     const { tableSize } = useTableState();
 
-    // Use the table layout configuration system (only 4 and 9 players supported)
-    // TODO: Add support for 2, 3, 5, 6, 7, 8 player tables - positions need to be configured in tableLayoutConfig.ts
-    const tableLayout = useTableLayout((tableSize as 4 | 9) || 9);
+    const tableLayout = useTableLayout((tableSize as 2 | 6 | 9) || 9);
 
     // Add the useGameProgress hook
     const { isGameInProgress, handNumber, actionCount, nextToAct } = useGameProgress(id);
@@ -372,9 +366,6 @@ const Table = React.memo(() => {
     const [startIndex, setStartIndex] = useState<number>(0); // Controls table rotation (0 = no rotation)
 
     const [currentIndex, setCurrentIndex] = useState<number>(1);
-
-    // Add the useChipPositions hook AFTER startIndex is defined
-    const { chipPositionArray: _chipPositionArray } = useChipPositions(startIndex);
 
     // Add the usePlayerChipData hook
     const { getChipAmount } = usePlayerChipData();
