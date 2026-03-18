@@ -1,16 +1,26 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, AxiosInstance } from "axios";
 
+export interface HTTPClientConfig {
+    baseUrl: string;
+    secure: boolean;
+    signal?: AbortSignal;
+    timeout?: number;
+    retries?: number;
+}
+
 export default class HTTPClient {
     private client: AxiosInstance;
     private customOnError!: (e: string) => void | undefined;
 
-    constructor(baseUrl: string, secure: boolean) {
+    constructor(config: HTTPClientConfig) {
         this.client = axios.create({
-            baseURL: baseUrl
+            baseURL: config.baseUrl,
+            timeout: config.timeout,
+            signal: config.signal
             // need to add headers here if we want to support secure endpoints in the future, but for now all endpoints are public so we can skip it
         });
 
-        if (secure) {
+        if (config.secure) {
             this.client.interceptors.request.use(
                 async config => {
                     const token = await window.localStorage.getItem("token");

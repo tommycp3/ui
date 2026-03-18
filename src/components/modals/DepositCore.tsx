@@ -35,7 +35,7 @@ interface PaymentData {
 }
 
 import type { DepositCoreProps } from "./types";
-import { useApi } from "../../context/ApiContext";
+import { usePaymentApi } from "../../context/PaymentApiContext";
 
 const DepositCore: React.FC<DepositCoreProps> = ({ onSuccess, showMethodSelector = true }) => {
     const BRIDGE_ADDRESS = COSMOS_BRIDGE_ADDRESS;
@@ -67,7 +67,7 @@ const DepositCore: React.FC<DepositCoreProps> = ({ onSuccess, showMethodSelector
     const [creatingPayment, setCreatingPayment] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<string>("waiting");
 
-    const api = useApi();
+    const api = usePaymentApi();
 
     useEffect(() => {
         if (allowance) {

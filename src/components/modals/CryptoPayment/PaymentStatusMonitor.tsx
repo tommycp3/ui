@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import spinner from "../../../assets/spinning-circles.svg";
 import type { PaymentStatusMonitorProps } from "../types";
 import styles from "./PaymentStatusMonitor.module.css";
-import { useApi } from "../../../context/ApiContext";
+import { usePaymentApi } from "../../../context/PaymentApiContext";
 
 interface PaymentStatus {
     payment_status: string;
@@ -77,7 +77,7 @@ const PaymentStatusMonitor: React.FC<PaymentStatusMonitorProps> = ({ paymentId, 
     const [status, setStatus] = useState<PaymentStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const api = useApi();
+    const api = usePaymentApi();
 
     // Use refs for callbacks to prevent effect cascades (infinite re-render loop)
     const onPaymentCompleteRef = useRef(onPaymentComplete);

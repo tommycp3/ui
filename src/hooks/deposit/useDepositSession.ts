@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { DEPOSIT_ADDRESS, PROXY_URL } from "../../config/constants";
 import { DepositSession, TransactionStatus } from "../../types";
-import { useApi } from "../../context/ApiContext";
 
 interface UseDepositSessionReturn {
     sessionId: string | null;
@@ -30,7 +29,6 @@ export const useDepositSession = (): UseDepositSessionReturn => {
     const [completionCountdown, setCompletionCountdown] = useState<number>(0);
     const [isDepositCompleted, setIsDepositCompleted] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const api = useApi();
 
     // Get progress percentage based on transaction status
     const getProgressFromStatus = (status: TransactionStatus): number => {

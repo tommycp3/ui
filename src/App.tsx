@@ -31,7 +31,8 @@ import FaviconSetter from "./components/FaviconSetter";
 import { GlobalHeader } from "./components/GlobalHeader";
 import { ProfileAvatarProvider } from "./context/profile/ProfileAvatarContext";
 import { ProfileAvatarModal } from "./components/profile";
-import { ApiProvider } from "./context/ApiContext";
+import { PaymentApiProvider } from "./context/PaymentApiContext";
+import { CosmosApiProvider } from "./context/CosmosApiContext";
 
 const queryClient = new QueryClient();
 
@@ -123,11 +124,12 @@ function App() {
             <QueryClientProvider client={queryClient}>
                 <WagmiProvider config={wagmiAdapter.wagmiConfig}>
                     <GameStateProvider>
-                        <ApiProvider>
-                            <AppContent />
-                        </ApiProvider>
                         <ProfileAvatarProvider>
-                            <AppContent />
+                            <PaymentApiProvider>
+                                <CosmosApiProvider>
+                                    <AppContent />
+                                </CosmosApiProvider>
+                            </PaymentApiProvider>
                         </ProfileAvatarProvider>
                     </GameStateProvider>
                 </WagmiProvider>
