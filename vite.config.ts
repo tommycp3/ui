@@ -46,8 +46,13 @@ export default defineConfig({
             process: path.resolve(__dirname, "node_modules/process/browser.js"),
             util: path.resolve(__dirname, "node_modules/util"),
             events: path.resolve(__dirname, "node_modules/events"),
+            // Fix @noble/hashes subpath exports for Vite 8 / Rolldown
+            "@noble/hashes/sha2.js": path.resolve(__dirname, "node_modules/@noble/hashes/esm/sha2.js"),
+            "@noble/hashes/utils.js": path.resolve(__dirname, "node_modules/@noble/hashes/esm/utils.js"),
+            "@noble/hashes/sha2": path.resolve(__dirname, "node_modules/@noble/hashes/esm/sha2.js"),
+            "@noble/hashes/utils": path.resolve(__dirname, "node_modules/@noble/hashes/esm/utils.js"),
         },
-        dedupe: ["@cosmjs/stargate", "@cosmjs/proto-signing", "ethers"],
+        dedupe: ["@cosmjs/stargate", "@cosmjs/proto-signing", "ethers", "@noble/hashes"],
     },
     optimizeDeps: {
         include: [

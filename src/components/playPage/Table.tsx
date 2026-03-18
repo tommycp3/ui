@@ -704,10 +704,10 @@ const Table = React.memo(() => {
                             }}
                         >
                             <div className="flex-grow scrollbar-none bg-custom-table h-full flex flex-col justify-center items-center relative">
-                                <div className="w-[900px] h-[450px] relative text-center block transform translate-y-[30px]">
+                                <div className="w-[900px] h-[450px] relative text-center block">
                                     <div className="h-full flex align-center justify-center">
                                         <div
-                                            className="table-surface-shadow z-20 relative flex flex-col w-[900px] h-[350px] left-1/2 top-0 transform -translate-x-1/2 text-center border-[3px] border-rgba(255, 255, 255, 0.2) border-solid rounded-full items-center justify-center"
+                                            className="table-surface-shadow z-20 relative flex flex-col w-[900px] h-[450px] left-1/2 top-0 transform -translate-x-1/2 text-center border-[3px] border-rgba(255, 255, 255, 0.2) border-solid rounded-[225px] items-center justify-center"
                                         >
                                             {/* //! Table */}
                                             <TableBoard

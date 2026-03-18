@@ -4,10 +4,47 @@
  * Calculates all table layout positions from the spec's stadium-intersection model.
  * Replaces ~1700 lines of hardcoded position arrays with calculated positions.
  *
- * Coordinate system:
- * - Spec uses a 1600x850 "stage" with table centered at (800, 535)
- * - The 900x450 table div starts at stage (350, 310)
- * - Positions output here are relative to the 900x450 table div
+ * ═══════════════════════════════════════════════════════════════════════
+ * HOW IT WORKS
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * 1. SPEC COORDINATES (from issue #142)
+ *    TexasHODL provided exact seat positions on a 1600×850 "stage" using
+ *    a stadium-intersection model (radial angles from table center).
+ *
+ * 2. COORDINATE CONVERSION
+ *    stageToTable() converts those absolute stage coordinates into
+ *    positions relative to the 900×450 table div:
+ *      Stage (1282.2, 683.5) → Table-relative { left: "932.2px", top: "373.5px" }
+ *
+ * 3. DERIVED POSITIONS
+ *    Chips, dealer buttons, and animations are calculated from seat positions:
+ *      - Chips:      40% from seat toward table center (adjust CHIP_DISTANCE)
+ *      - Dealer:     30% from seat toward table center (adjust DEALER_DISTANCE)
+ *      - Turn anim:  seat position + 80px down (adjust TURN_ANIM_Y_OFFSET)
+ *      - Win anim:   same as seat position
+ *
+ * 4. VIEWPORT SCALING
+ *    Positions are FIXED on the table. Screen-size adaptation is handled by
+ *    zoom/scale on the table container (calculateZoom + getTableTransform).
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ * HOW TO FINE-TUNE POSITIONS
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * To move ALL chips/dealers/animations globally:
+ *   → Change the distance constants: CHIP_DISTANCE, DEALER_DISTANCE, TURN_ANIM_Y_OFFSET
+ *
+ * To nudge ONE specific seat's element by a few pixels:
+ *   → Add an entry to GLOBAL_OFFSETS (applies on all screen sizes)
+ *     Example: GLOBAL_OFFSETS = { 9: { chips: { 3: { dx: -5, dy: 10 } } } }
+ *
+ * To nudge ONE specific seat on ONE specific screen size:
+ *   → Add an entry to VIEWPORT_OFFSETS
+ *     Example: VIEWPORT_OFFSETS["mobile-portrait"] = { 9: { chips: { 5: { dy: -8 } } } }
+ *
+ * dx = horizontal offset (positive = right, negative = left)
+ * dy = vertical offset (positive = down, negative = up)
  *
  * References:
  * - Issue #142: https://github.com/block52/ui/issues/142
@@ -33,7 +70,7 @@ export const STAGE_WIDTH = 1600;
 export const STAGE_HEIGHT = 850;
 export const TABLE_WIDTH = 900;
 export const TABLE_HEIGHT = 450;
-export const TABLE_SURFACE_HEIGHT = 350; // The oval surface div inside the table div
+export const TABLE_SURFACE_HEIGHT = 450; // Match spec: table surface fills the full 900x450 table div
 export const TABLE_CENTER_X = 800;
 export const TABLE_CENTER_Y = 535;
 export const SEAT_OFFSET = 72;
@@ -112,9 +149,27 @@ function stageToPosition(stageX: number, stageY: number, color?: string): Positi
     };
 }
 
+// ─── Derivation Constants (tweak these to move ALL positions globally) ──
+
+/** How far chips sit from seat toward table center (0 = at seat, 1 = at center) */
+const CHIP_DISTANCE = 0.4;
+
+/** How far dealer button sits from seat toward table center */
+const DEALER_DISTANCE = 0.3;
+
+/** How many pixels down the turn animation ring sits below the player */
+const TURN_ANIM_Y_OFFSET = 80;
+
 // ─── Position Generators ─────────────────────────────────────────────
 
 export type TableSize = 2 | 6 | 9;
+
+/** Map any player count to the nearest supported table layout */
+export function normalizeTableSize(raw: number): TableSize {
+    if (raw <= 2) return 2;
+    if (raw <= 6) return 6;
+    return 9;
+}
 
 /** Get player seat positions for a given table size */
 export function getSeatPositions(tableSize: TableSize): Position[] {
@@ -141,11 +196,10 @@ export function getChipPositions(tableSize: TableSize): ChipPosition[] {
         // Vector from seat toward table center
         const dx = TABLE_CENTER_X - sx;
         const dy = TABLE_CENTER_Y - sy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Move 40% of the way from seat toward center
-        const chipStageX = sx + dx * 0.4;
-        const chipStageY = sy + dy * 0.4;
+        // Move CHIP_DISTANCE of the way from seat toward center
+        const chipStageX = sx + dx * CHIP_DISTANCE;
+        const chipStageY = sy + dy * CHIP_DISTANCE;
 
         // Convert to table-div-relative
         const [chipX] = stageToTable(chipStageX, chipStageY);
@@ -174,9 +228,9 @@ export function getDealerPositions(tableSize: TableSize): Position[] {
         const dx = TABLE_CENTER_X - sx;
         const dy = TABLE_CENTER_Y - sy;
 
-        // Move 30% from seat toward center
-        const dealerX = sx + dx * 0.3;
-        const dealerY = sy + dy * 0.3;
+        // Move DEALER_DISTANCE from seat toward center
+        const dealerX = sx + dx * DEALER_DISTANCE;
+        const dealerY = sy + dy * DEALER_DISTANCE;
 
         return stageToPosition(dealerX, dealerY);
     });
@@ -191,7 +245,7 @@ export function getTurnAnimationPositions(tableSize: TableSize): Position[] {
 
     return coords.map(([sx, sy]) => {
         // Shift down slightly so the ring appears below the player
-        return stageToPosition(sx, sy + 80);
+        return stageToPosition(sx, sy + TURN_ANIM_Y_OFFSET);
     });
 }
 
@@ -202,6 +256,98 @@ export function getTurnAnimationPositions(tableSize: TableSize): Position[] {
 export function getWinAnimationPositions(tableSize: TableSize): Position[] {
     const coords = SEAT_COORDS[tableSize];
     return coords.map(([x, y]) => stageToPosition(x, y));
+}
+
+// ─── Fine-Tuning Offsets ─────────────────────────────────────────────
+//
+// Add entries here to nudge individual elements by a few pixels after
+// visual QA. Leave empty by default — only add what needs adjustment.
+//
+// HOW TO USE:
+//
+// 1. Nudge seat 3's chips 5px left, 10px down on ALL screens:
+//    GLOBAL_OFFSETS = { 9: { chips: { 3: { dx: -5, dy: 10 } } } }
+//
+// 2. Nudge seat 5's chips 8px up on MOBILE PORTRAIT only:
+//    VIEWPORT_OFFSETS["mobile-portrait"] = { 9: { chips: { 5: { dy: -8 } } } }
+//
+// 3. Move dealer button for seat 7 right 10px on tablet:
+//    VIEWPORT_OFFSETS["tablet"] = { 9: { dealers: { 7: { dx: 10 } } } }
+//
+// dx = horizontal (positive = right, negative = left)
+// dy = vertical (positive = down, negative = up)
+
+interface Offset { dx?: number; dy?: number; }
+
+type ElementType = "players" | "vacantPlayers" | "chips" | "dealers"
+                 | "turnAnimations" | "winAnimations";
+
+/** Global offsets — apply to all screen sizes */
+const GLOBAL_OFFSETS: Partial<Record<TableSize,
+    Partial<Record<ElementType, Record<number, Offset>>>>> = {
+    // Add entries here. Example:
+    // 9: { chips: { 3: { dx: -5, dy: 10 } } }
+};
+
+/** Per-viewport offsets — override for specific screen sizes only */
+const VIEWPORT_OFFSETS: Partial<Record<ViewportMode, typeof GLOBAL_OFFSETS>> = {
+    // Add entries here. Example:
+    // "mobile-portrait": { 9: { chips: { 5: { dx: 0, dy: -8 } } } }
+};
+
+/** Apply global + viewport offsets to a Position array */
+function applyPositionOffsets(
+    positions: Position[],
+    tableSize: TableSize,
+    element: ElementType
+): Position[] {
+    const mode = getViewportMode();
+    const globalOffs = GLOBAL_OFFSETS[tableSize]?.[element];
+    const vpOffs = VIEWPORT_OFFSETS[mode]?.[tableSize]?.[element];
+
+    if (!globalOffs && !vpOffs) return positions;
+
+    return positions.map((pos, i) => {
+        const g = globalOffs?.[i];
+        const v = vpOffs?.[i];
+        if (!g && !v) return pos;
+
+        const dx = (g?.dx ?? 0) + (v?.dx ?? 0);
+        const dy = (g?.dy ?? 0) + (v?.dy ?? 0);
+
+        return {
+            ...pos,
+            left: `${parseFloat(pos.left) + dx}px`,
+            top: `${parseFloat(pos.top) + dy}px`
+        };
+    });
+}
+
+/** Apply global + viewport offsets to a ChipPosition array */
+function applyChipOffsets(
+    positions: ChipPosition[],
+    tableSize: TableSize
+): ChipPosition[] {
+    const mode = getViewportMode();
+    const globalOffs = GLOBAL_OFFSETS[tableSize]?.["chips"];
+    const vpOffs = VIEWPORT_OFFSETS[mode]?.[tableSize]?.["chips"];
+
+    if (!globalOffs && !vpOffs) return positions;
+
+    return positions.map((pos, i) => {
+        const g = globalOffs?.[i];
+        const v = vpOffs?.[i];
+        if (!g && !v) return pos;
+
+        const dx = (g?.dx ?? 0) + (v?.dx ?? 0);
+        const dy = (g?.dy ?? 0) + (v?.dy ?? 0);
+
+        // Chips use "bottom" not "top", so dy inverts: positive dy = down = decrease bottom
+        return {
+            left: `${parseFloat(pos.left) + dx}px`,
+            bottom: `${parseFloat(pos.bottom) - dy}px`
+        };
+    });
 }
 
 // ─── All Positions Bundle ────────────────────────────────────────────
@@ -215,15 +361,15 @@ export interface PositionArrays {
     winAnimations: Position[];
 }
 
-/** Get all position arrays for a given table size */
+/** Get all position arrays for a given table size, with offsets applied */
 export function getAllPositions(tableSize: TableSize): PositionArrays {
     return {
-        players: getSeatPositions(tableSize),
-        vacantPlayers: getVacantPositions(tableSize),
-        chips: getChipPositions(tableSize),
-        dealers: getDealerPositions(tableSize),
-        turnAnimations: getTurnAnimationPositions(tableSize),
-        winAnimations: getWinAnimationPositions(tableSize)
+        players: applyPositionOffsets(getSeatPositions(tableSize), tableSize, "players"),
+        vacantPlayers: applyPositionOffsets(getVacantPositions(tableSize), tableSize, "vacantPlayers"),
+        chips: applyChipOffsets(getChipPositions(tableSize), tableSize),
+        dealers: applyPositionOffsets(getDealerPositions(tableSize), tableSize, "dealers"),
+        turnAnimations: applyPositionOffsets(getTurnAnimationPositions(tableSize), tableSize, "turnAnimations"),
+        winAnimations: applyPositionOffsets(getWinAnimationPositions(tableSize), tableSize, "winAnimations")
     };
 }
 
