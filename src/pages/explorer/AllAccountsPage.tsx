@@ -34,7 +34,7 @@ export interface ValidatorsResponse {
     validators: any[];
 }
 
-interface AccountsResponse {
+export interface AccountsResponse {
     pagination: {
         next_key: string | null;
         total: string;
@@ -42,7 +42,7 @@ interface AccountsResponse {
     accounts: any[];
 }
 
-interface AccountBalanceResponse {
+export interface AccountBalanceResponse {
     pagination: {
         next_key: string | null;
         total: string;
@@ -97,7 +97,7 @@ export default function AllAccountsPage() {
             // Fetch validators first to identify validator accounts
             const validatorMap = new Map<string, ValidatorInfo>();
             try {
-                const validatorsResponse = (await cosmosApi.getValidators()) as ValidatorsResponse;
+                const validatorsResponse = (await cosmosApi.getValidators(100)) as ValidatorsResponse;
                 if (validatorsResponse) {
                     const validators = validatorsResponse.validators || [];
 
