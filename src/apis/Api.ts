@@ -5,6 +5,9 @@ export class PaymentApi extends HTTPClient {
     public getCurrencies = () => this.get("/api/nowpayments/currencies");
     public getPaymentStatus = (paymentId: string) => this.get(`/api/nowpayments/payment/${paymentId}`);
     public getDepositSession = (userAddress: string) => this.get(`/deposit-sessions/user/${userAddress}`);
+    public getHotWalletInfo = () => this.get("/api/nowpayments/hot-wallet-info");
+    public manualBridge = (data: { cosmosAddress: string; amount: string }) => this.post("/api/nowpayments/manual-bridge", data);
+    public approveBridge = () => this.post("/api/nowpayments/approve-bridge");
 }
 
 export class CosmosApi extends HTTPClient {
@@ -17,5 +20,6 @@ export class CosmosApi extends HTTPClient {
     public getAccounts = (limit?: number) => this.get(`/cosmos/auth/v1beta1/accounts${limit ? `?pagination.limit=${limit}` : ""}`);
     public getBalanceByAddress = (address: string) => this.get(`/cosmos/bank/v1beta1/balances/${address}`);
     public getGameState = (gameId: string) => this.get(`block52/pokerchain/poker/v1/game_state/${gameId}`);
-    public getWithdrawal = () => this.get("/pokerchain/poker/withdrawal_requests"); 
+    public getWithdrawalRequests = () => this.get("/pokerchain/poker/withdrawal_requests");
+    public getIsTxProcessed = (txHash: string) => this.get(`/block52/pokerchain/poker/v1/is_tx_processed/${txHash}`);
 }
