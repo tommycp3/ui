@@ -147,6 +147,7 @@ export default function GenesisState() {
         setLoadingBridgeState(true);
         try {
             // Fetch withdrawal requests
+            // Backend not yet Implemented
             const withdrawalsResponse = await fetch(`${COSMOS_REST_URL}/pokerchain/poker/withdrawal_requests`);
             const withdrawalsData = withdrawalsResponse.ok ? await withdrawalsResponse.json() : { withdrawal_requests: [] };
 
