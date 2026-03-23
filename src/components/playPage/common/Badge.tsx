@@ -1,75 +1,38 @@
 import React from "react";
-import { usePlayerActionDropBox, PlayerActionDisplay } from "../../../hooks/player/usePlayerActionDropBox";
-import { useSeatJoinNotification, SeatJoinNotification } from "../../../hooks/notifications/useSeatJoinNotification";
+import { usePlayerActionDropBox } from "../../../hooks/player/usePlayerActionDropBox";
+import { useSeatJoinNotification } from "../../../hooks/notifications/useSeatJoinNotification";
 import { useGameStateContext } from "../../../context/GameStateContext";
 import { isTournamentFormat } from "../../../utils/gameFormatUtils";
 import { formatForSitAndGo, formatForCashGame, formatUSDCToSimpleDollars } from "../../../utils/numberUtils";
 import "./Badge.css";
 
-// Action display component moved into Badge
-const ActionDisplay: React.FC<{ actionDisplay: PlayerActionDisplay; playerColor?: string }> = ({ 
-    actionDisplay, 
-    playerColor = "#3b82f6" 
-}) => {
-    if (!actionDisplay.isVisible && !actionDisplay.isAnimatingOut) {
-        return null;
-    }
-
-    return (
-        <div
-            className={`action-display-container ${
-                actionDisplay.isAnimatingOut 
-                    ? "action-display-exit" 
-                    : "action-display-enter"
-            }`}
-        >
-            {/* Action Box */}
-            <div
-                className={`action-display-box ${
-                    !actionDisplay.isAnimatingOut ? "action-display-pulse" : ""
-                }`}
-                style={{
-                    backgroundColor: `${playerColor}dd`,
-                    borderColor: playerColor,
-                    boxShadow: `0 4px 12px ${playerColor}40, 0 2px 4px rgba(0,0,0,0.3)`
-                }}
-            >
-                <div className="action-display-content">
-                    <span className="action-display-text">
-                        {actionDisplay.action}
-                    </span>
-                    {actionDisplay.amount && (
-                        <span className="action-display-amount">
-                            {actionDisplay.amount}
-                        </span>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+type TransientBannerState = {
+    label: string;
+    amount?: string;
+    isVisible: boolean;
+    isAnimatingOut: boolean;
+    isTextHiding: boolean;
 };
 
-// Seat join notification display component
-const SeatJoinDisplay: React.FC<{ notification: SeatJoinNotification; playerColor?: string }> = ({ 
-    notification, 
-    playerColor = "#3b82f6" 
+const TransientBanner: React.FC<{ banner: TransientBannerState; playerColor?: string }> = ({
+    banner,
+    playerColor = "#3b82f6"
 }) => {
-    if (!notification.isVisible && !notification.isAnimatingOut) {
+    if (!banner.isVisible && !banner.isAnimatingOut) {
         return null;
     }
 
     return (
         <div
             className={`action-display-container ${
-                notification.isAnimatingOut 
-                    ? "action-display-exit" 
+                banner.isAnimatingOut
+                    ? "action-display-exit"
                     : "action-display-enter"
             }`}
         >
-            {/* Seat Join Box */}
             <div
                 className={`action-display-box ${
-                    !notification.isAnimatingOut ? "action-display-pulse" : ""
+                    !banner.isAnimatingOut ? "action-display-pulse" : ""
                 }`}
                 style={{
                     backgroundColor: `${playerColor}dd`,
@@ -77,10 +40,15 @@ const SeatJoinDisplay: React.FC<{ notification: SeatJoinNotification; playerColo
                     boxShadow: `0 4px 12px ${playerColor}40, 0 2px 4px rgba(0,0,0,0.3)`
                 }}
             >
-                <div className="action-display-content">
+                <div className={`action-display-content ${banner.isTextHiding ? "action-display-content-hide" : ""}`}>
                     <span className="action-display-text">
-                        YOUR SEAT
+                        {banner.label}
                     </span>
+                    {banner.amount && (
+                        <span className="action-display-amount">
+                            {banner.amount}
+                        </span>
+                    )}
                 </div>
             </div>
         </div>
@@ -114,6 +82,29 @@ const Badge: React.FC<BadgeProps> = React.memo(({ count, value, color, canExtend
     
     // Get seat join notification data for this player
     const seatJoinNotification = useSeatJoinNotification(count);
+
+    const transientBanner: TransientBannerState | null = (() => {
+        if (actionDisplay.isVisible || actionDisplay.isAnimatingOut) {
+            return {
+                label: actionDisplay.action,
+                amount: actionDisplay.amount,
+                isVisible: actionDisplay.isVisible,
+                isAnimatingOut: actionDisplay.isAnimatingOut,
+                isTextHiding: actionDisplay.isTextHiding
+            };
+        }
+
+        if (seatJoinNotification.isVisible || seatJoinNotification.isAnimatingOut) {
+            return {
+                label: "YOUR SEAT",
+                isVisible: seatJoinNotification.isVisible,
+                isAnimatingOut: seatJoinNotification.isAnimatingOut,
+                isTextHiding: seatJoinNotification.isTextHiding
+            };
+        }
+
+        return null;
+    })();
 
     // Get place suffix (1st, 2nd, 3rd, 4th)
     const getPlaceSuffix = (place: number) => {
@@ -153,17 +144,13 @@ const Badge: React.FC<BadgeProps> = React.memo(({ count, value, color, canExtend
                 </div>
             )}
 
-            {/* Player Action Drop Box - positioned below the price */}
-            <ActionDisplay 
-                actionDisplay={actionDisplay}
-                playerColor={color}
-            />
-
-            {/* Seat Join Notification - positioned below the price */}
-            <SeatJoinDisplay 
-                notification={seatJoinNotification}
-                playerColor={color}
-            />
+            {/* Single transient banner: action takes precedence over seat notification */}
+            {transientBanner && (
+                <TransientBanner
+                    banner={transientBanner}
+                    playerColor={color}
+                />
+            )}
             
             {/* Timer Extension Icon - Timer icon inside badge */}
             {canExtend && onExtend && (

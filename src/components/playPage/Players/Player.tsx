@@ -15,6 +15,8 @@ import { getCardImageUrl } from "../../../utils/cardImages";
 import { useSitAndGoPlayerResults } from "../../../hooks/game/useSitAndGoPlayerResults";
 import { useAllInEquity } from "../../../hooks/player/useAllInEquity";
 import { useProfileAvatar } from "../../../context/profile/ProfileAvatarContext";
+import { usePlayerActionDropBox } from "../../../hooks/player/usePlayerActionDropBox";
+import { useSeatJoinNotification } from "../../../hooks/notifications/useSeatJoinNotification";
 import styles from "./PlayersCommon.module.css";
 
 const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
@@ -22,7 +24,7 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
         const { id } = useParams<{ id: string }>();
         const { playerData, stackValue, isFolded, isAllIn, isSeated, isSittingOut, isBusted, holeCards, round } = usePlayerData(index);
         const { winnerInfo } = useWinnerInfo();
-        const { extendTime, canExtend, isCurrentUserTurn } = usePlayerTimer(id, index);
+        const { extendTime, canExtend, isCurrentUserTurn, isActive: isTurnTimerActive } = usePlayerTimer(id, index);
 
         const { dealerSeat } = useDealerPosition();
         const { equities, shouldShow: shouldShowEquity } = useAllInEquity();
@@ -173,7 +175,11 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
         // 8) status bar style (no pulse)
         const statusBarStyle = useMemo(
             () => ({
-                backgroundColor: isWinner ? colors.accent.success : color || "#6b7280"
+                backgroundColor: `${isWinner ? colors.accent.success : color || "#6b7280"}dd`,
+                borderColor: isWinner ? colors.accent.success : color || "#6b7280",
+                borderWidth: "1px",
+                borderStyle: "solid",
+                boxShadow: `0 4px 12px ${isWinner ? colors.accent.success : color || "#6b7280"}40, 0 2px 4px rgba(0,0,0,0.3)`
             }),
             [isWinner, color]
         );
@@ -181,6 +187,17 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
         const selectedAvatarUrl = useMemo(() => {
             return getAvatarForAddress(playerData?.address, playerData?.avatar);
         }, [getAvatarForAddress, playerData?.address, playerData?.avatar]);
+
+        const actionDisplay = usePlayerActionDropBox(index);
+        const seatJoinNotification = useSeatJoinNotification(index);
+
+        const hasTransientMessage =
+            actionDisplay.isVisible ||
+            actionDisplay.isAnimatingOut ||
+            seatJoinNotification.isVisible ||
+            seatJoinNotification.isAnimatingOut;
+
+        const isSeatBarVisible = isWinner || (!hasTransientMessage && isTurnTimerActive);
 
         useEffect(() => {
             setAvatarLoadFailed(false);
@@ -224,12 +241,16 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
                             NFT
                         </div>
                     )}
-                    <div
-                        style={statusBarStyle}
-                        className="b-[0%] mt-[auto] w-full h-[55px] shadow-[1px_2px_6px_2px_rgba(0,0,0,0.3)] rounded-tl-2xl rounded-tr-2xl rounded-bl-md rounded-br-md flex flex-col"
-                    >
-                        {!isWinner && round !== "showdown" && <ProgressBar index={index} />}
-                        {statusText}
+                    <div className="b-[0%] mt-[auto] w-full h-[55px] overflow-hidden">
+                        <div
+                            style={statusBarStyle}
+                            className={`w-full h-[55px] shadow-[1px_2px_6px_2px_rgba(0,0,0,0.3)] rounded-tl-2xl rounded-tr-2xl rounded-bl-md rounded-br-md flex flex-col transition-all duration-300 ease-out ${
+                                isSeatBarVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
+                            }`}
+                        >
+                            {!isWinner && round !== "showdown" && <ProgressBar index={index} />}
+                            {statusText}
+                        </div>
                     </div>
                     <div className="absolute top-[-10px] w-full">
                         <Badge
