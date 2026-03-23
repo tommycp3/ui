@@ -33,6 +33,7 @@ import { ProfileAvatarProvider } from "./context/profile/ProfileAvatarContext";
 import { ProfileAvatarModal } from "./components/profile";
 import { PaymentApiProvider } from "./context/PaymentApiContext";
 import { CosmosApiProvider } from "./context/CosmosApiContext";
+import { IndexerApiProvider } from "./context/IndexerApiContext";
 
 const queryClient = new QueryClient();
 
@@ -127,7 +128,9 @@ function App() {
                         <ProfileAvatarProvider>
                             <PaymentApiProvider>
                                 <CosmosApiProvider>
-                                    <AppContent />
+                                    <IndexerApiProvider>
+                                        <AppContent />
+                                    </IndexerApiProvider>
                                 </CosmosApiProvider>
                             </PaymentApiProvider>
                         </ProfileAvatarProvider>

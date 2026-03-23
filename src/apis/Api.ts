@@ -23,3 +23,10 @@ export class CosmosApi extends HTTPClient {
     public getWithdrawalRequests = () => this.get("/pokerchain/poker/withdrawal_requests");
     public getIsTxProcessed = (txHash: string) => this.get(`/block52/pokerchain/poker/v1/is_tx_processed/${txHash}`);
 }
+
+export class IndexerApi extends HTTPClient {
+    public getCardStats = () => this.get("/api/v1/stats/cards");
+    public getSyncStatus = () => this.get("/api/v1/status");
+    public getSummaryStats = () => this.get("/api/v1/stats/summary");
+    public getRandomnessAnalysis = () => this.get("/api/v1/analysis/randomness");
+}
