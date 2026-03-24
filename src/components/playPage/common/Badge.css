@@ -80,6 +80,74 @@
   transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
 }
 
+/* Unified Seat Banner Shell — single container for all banner modes */
+.seat-banner-shell {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: -22px;
+  height: 55px;
+  overflow: hidden;
+  z-index: -10;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.seat-banner-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.seat-banner-hidden {
+  transform: translateY(-8px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seat-banner-box {
+  width: 100%;
+  min-height: 55px;
+  height: 55px;
+  padding: 0.25rem 0.5rem 0.15rem;
+  border-radius: 1rem 1rem 0.375rem 0.375rem;
+  box-shadow: 0 2px 6px color-mix(in srgb, #000000 22%, transparent);
+  border-width: 1px;
+  border-style: solid;
+  color: white;
+  font-weight: 700;
+  font-size: 0.75rem;
+  white-space: normal;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  /* align-items defaults to stretch so ProgressBar gets full width */
+  /* justify-content defaults to flex-start so mt-auto in children works */
+  transition: box-shadow 0.3s ease;
+}
+
+.seat-banner-text {
+  color: #ffffff;
+}
+
+/* Content swap animation — used when shell is already visible (e.g. timer→action) */
+.seat-banner-content-swap {
+  animation: seatBannerContentSwap 0.25s ease-out;
+}
+
+@keyframes seatBannerContentSwap {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .action-display-bridge {
   display: none;
 }
@@ -121,6 +189,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
+  margin-top: auto;
   margin-bottom: 0.35rem;
   max-height: 94px;
   overflow: hidden;
