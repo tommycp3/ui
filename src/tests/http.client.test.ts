@@ -195,4 +195,42 @@ describe("httpClient", () => {
             expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/games/123", undefined);
         });
     });
+
+    describe("Timeout", () => {
+        it("should pass timeout to axios instance config", () => {
+            mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
+
+            new HTTPClient({ baseUrl: "https://api.example.com", secure: false, timeout: 5000 });
+
+            expect(mockedAxios.create).toHaveBeenCalledWith(expect.objectContaining({ timeout: 5000 }));
+        });
+
+        it("should not set timeout when not provided", () => {
+            mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
+
+            new HTTPClient({ baseUrl: "https://api.example.com", secure: false });
+
+            expect(mockedAxios.create).toHaveBeenCalledWith(expect.objectContaining({ timeout: undefined }));
+        });
+
+        it("should reject with error on request timeout", async () => {
+            const timeoutError = new Error("timeout of 5000ms exceeded");
+            Object.assign(timeoutError, { code: "ECONNABORTED" });
+            mockAxiosInstance.get.mockRejectedValueOnce(timeoutError);
+
+            await expect(httpClient.get("/api/slow")).rejects.toThrow("timeout of 5000ms exceeded");
+        });
+
+        it("should call custom error handler on timeout", async () => {
+            const customHandler = jest.fn();
+            httpClient.setCustomOnError(customHandler);
+
+            const timeoutError = new Error("timeout of 5000ms exceeded");
+            Object.assign(timeoutError, { code: "ECONNABORTED" });
+            mockAxiosInstance.get.mockRejectedValueOnce(timeoutError);
+
+            await expect(httpClient.get("/api/slow")).rejects.toThrow("timeout of 5000ms exceeded");
+            expect(customHandler).toHaveBeenCalled();
+        });
+    });
 });
