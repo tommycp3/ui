@@ -3,8 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { AnimatedBackground } from "../../components/common/AnimatedBackground";
 import { ExplorerHeader } from "../../components/explorer/ExplorerHeader";
 import { getCardImageUrl } from "../../utils/cardImages";
-import { FaCopy, FaCheck } from "react-icons/fa";
-import { toast } from "react-toastify";
 import type { HandDetail, HandListItem, HandListResponse } from "./types";
 import { useIndexerApi } from "../../context/IndexerApiContext";
 
@@ -15,19 +13,20 @@ export default function HandReplayPage() {
     const [hands, setHands] = useState<HandListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [copiedUrl, setCopiedUrl] = useState(false);
     const indexerApi = useIndexerApi();
 
     const fetchHand = useCallback(async () => {
-        if (!gameId || !handNumber) return;
+        if (!gameId) {
+            setError("No game ID provided. URL format: /explorer/hand/{gameId}/{handNumber}");
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
-            const res = (await indexerApi.getHand(gameId, handNumber)) as HandDetail;
-            if (!res) throw new Error(`Hand not found (${handNumber})`);
-            setHand(res);
 
-            // Also fetch all hands for this game for navigation
+            // Always fetch the hands list for this game
             try {
                 const listRes = (await indexerApi.getHands(gameId)) as HandListResponse;
                 if (listRes.data) {
@@ -36,6 +35,16 @@ export default function HandReplayPage() {
             } catch {
                 // Non-critical
             }
+
+            // If no hand number, show the list only
+            if (!handNumber) {
+                setLoading(false);
+                return;
+            }
+
+            const res = (await indexerApi.getHand(gameId, handNumber)) as HandDetail;
+            if (!res) throw new Error(`Hand not found (${handNumber})`);
+            setHand(res);
 
             setLoading(false);
         } catch (err) {
@@ -48,21 +57,6 @@ export default function HandReplayPage() {
     useEffect(() => {
         fetchHand();
     }, [fetchHand]);
-
-    const shareUrl = `${window.location.origin}/explorer/hand/${gameId}/${handNumber}`;
-
-    const handleCopyUrl = () => {
-        navigator.clipboard
-            .writeText(shareUrl)
-            .then(() => {
-                setCopiedUrl(true);
-                toast.success("Hand URL copied to clipboard!");
-                setTimeout(() => setCopiedUrl(false), 2000);
-            })
-            .catch(() => {
-                toast.error("Failed to copy URL");
-            });
-    };
 
     // Parse community and hole cards from revealed_cards
     const communityCards = useMemo(() => {
@@ -118,18 +112,36 @@ export default function HandReplayPage() {
                             </button>
                         </div>
                     </div>
+                ) : !handNumber && hands.length > 0 ? (
+                    /* Hands list mode — no hand number in URL */
+                    <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                        <h2 className="text-2xl font-bold text-white mb-2">
+                            Hands for Game
+                        </h2>
+                        <p className="text-gray-400 font-mono text-sm mb-6">{gameId}</p>
+                        <p className="text-gray-300 mb-4">{hands.length} hand{hands.length !== 1 ? "s" : ""} found</p>
+                        <div className="flex flex-wrap gap-2">
+                            {[...hands].sort((a, b) => a.hand_number - b.hand_number).map(h => (
+                                <Link
+                                    key={h.hand_number}
+                                    to={`/explorer/hand/${h.game_id}/${h.hand_number}`}
+                                    className="px-3 py-1.5 rounded text-sm transition-colors bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                >
+                                    Hand #{h.hand_number}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                ) : !handNumber ? (
+                    <div className="text-center py-12">
+                        <p className="text-lg text-gray-400">No hands found for this game.</p>
+                    </div>
                 ) : hand ? (
                     <>
-                        {/* Header with share button */}
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-white">Hand #{hand.hand_number}</h2>
-                            <button
-                                onClick={handleCopyUrl}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm"
-                            >
-                                {copiedUrl ? <FaCheck /> : <FaCopy />}
-                                {copiedUrl ? "Copied!" : "Share Hand"}
-                            </button>
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-bold text-white">
+                                Hand #{hand.hand_number}
+                            </h2>
                         </div>
 
                         {/* Hand Info Card */}
