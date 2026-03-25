@@ -931,7 +931,8 @@ const Table = React.memo(() => {
                                                     transform: "translate(-50%, -50%)"
                                                 }}
                                             >
-                                                <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
+                                                <img src={CustomDealer} alt="Dealer Button" className="w-full h-full"
+                                                     style={getViewportMode() === "mobile-portrait" ? { transform: "rotate(-90deg)" } : undefined} />
                                             </div>
                                         );
                                     })()}
@@ -953,7 +954,9 @@ const Table = React.memo(() => {
                                                     transform: "translate(-50%, 50%)"
                                                 }}
                                             >
-                                                <Chip amount={chipAmount} />
+                                                <div style={getViewportMode() === "mobile-portrait" ? { transform: "rotate(-90deg)" } : undefined}>
+                                                    <Chip amount={chipAmount} />
+                                                </div>
                                             </div>
                                         );
                                     })}

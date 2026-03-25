@@ -14,6 +14,7 @@
 
 import * as React from "react";
 import { memo, useState, useMemo, useCallback } from "react";
+import { getViewportMode } from "../../../config/stageGeometry";
 import { createPortal } from "react-dom";
 import { useParams } from "react-router-dom";
 import PokerProfile from "../../../assets/PokerProfile.svg";
@@ -218,6 +219,7 @@ const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo
         return (
             <>
                 <div className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2" style={containerStyle} onClick={handleSeatClick}>
+                  <div style={getViewportMode() === "mobile-portrait" ? { transform: "rotate(-90deg)" } : undefined}>
                     {/* Development Mode Debug Info */}
                     {import.meta.env.VITE_NODE_ENV === "development" && (
                         <div className="absolute top-[-50px] left-1/2 transform -translate-x-1/2 bg-gray-600 bg-opacity-80 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap z-50 border border-gray-400">
@@ -237,6 +239,7 @@ const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo
                     </div>
 
                     {/* Dealer Button — now rendered at table level in Table.tsx using geometry positions directly */}
+                  </div>
                 </div>
 
                 {/* Buy-in modal - using portal to render at document body */}

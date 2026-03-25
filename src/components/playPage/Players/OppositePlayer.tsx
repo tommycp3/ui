@@ -14,6 +14,7 @@
 import * as React from "react";
 import Badge from "../common/Badge";
 import ProgressBar from "../common/ProgressBar";
+import { getViewportMode } from "../../../config/stageGeometry";
 import { useWinnerInfo } from "../../../hooks/game/useWinnerInfo";
 import { usePlayerData } from "../../../hooks/player/usePlayerData";
 import { useShowingCardsByAddress } from "../../../hooks/player/useShowingCardsByAddress";
@@ -118,6 +119,7 @@ const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, i
                     top: top
                 }}
             >
+              <div style={getViewportMode() === "mobile-portrait" ? { transform: "rotate(-90deg)" } : undefined}>
                 {/* Development Mode Debug Info */}
                 {import.meta.env.VITE_NODE_ENV === "development" && (
                     <div className="absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-blue-600 bg-opacity-80 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap z-50 border border-blue-400">
@@ -206,6 +208,7 @@ const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, i
                     </div>
 
                     {/* Dealer Button — now rendered at table level in Table.tsx using geometry positions directly */}
+              </div>
                 </div>
             </div>
         </>

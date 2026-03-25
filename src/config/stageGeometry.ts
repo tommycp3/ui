@@ -501,8 +501,17 @@ export function calculateZoom(
     const usableWidth = containerWidth - params.paddingH;
     const usableHeight = containerHeight - params.footerOverlay - params.paddingV;
 
-    const scaleByWidth = usableWidth / bounds.width;
-    const scaleByHeight = usableHeight / bounds.height;
+    // In portrait mode, the table is rotated 90deg — content width maps to screen height
+    // and content height maps to screen width. Swap the fit calculation.
+    let scaleByWidth: number;
+    let scaleByHeight: number;
+    if (mode === "mobile-portrait") {
+        scaleByWidth = usableHeight / bounds.width;    // content width fits in screen height
+        scaleByHeight = usableWidth / bounds.height;   // content height fits in screen width
+    } else {
+        scaleByWidth = usableWidth / bounds.width;
+        scaleByHeight = usableHeight / bounds.height;
+    }
     const fitScale = Math.min(scaleByWidth, scaleByHeight);
 
     const result = Math.max(MIN_SCALE, Math.min(fitScale, MAX_GLOBAL_SCALE));
@@ -536,7 +545,62 @@ export function getTableTransform(
     const scaledCenterX = bounds.centerX * zoom;
     const scaledCenterY = bounds.centerY * zoom;
 
-    // Translate so content center lands at usable area center
+    if (mode === "mobile-portrait") {
+        // PORTRAIT: Rotate the table 90deg clockwise using transform-origin at the
+        // content center. This way rotate+scale happen around the content center,
+        // and we just need a simple translate to move it to the play area center.
+        //
+        // Transform-origin is set to the content center in stage px.
+        // After rotate(90deg) + scale(zoom) around that origin, the content center
+        // stays at the origin point. We then translate to move it to screen center.
+        //
+        // The CSS will be: transform-origin: CXpx CYpx;
+        //                  transform: translate(dx, dy) rotate(90deg) scale(zoom);
+        //
+        // Since transform-origin handles centering, translate just offsets from origin to screen center.
+        // In the local coord system (before transforms), the origin is at (cx, cy).
+        // We want it to end up at screen (usableCenterX, usableCenterY).
+        // The origin starts at CSS top:0 left:0, so its screen position = (cx, cy) before transform.
+        // After rotate+scale around itself, it stays at (cx, cy) in the parent's coord system... no.
+        //
+        // Actually: transform-origin only affects WHERE the transforms are centered.
+        // The element still starts at (left:0, top:0).
+        // After all transforms, the origin point IS at the element's CSS position + origin offset.
+        //
+        // Simplest approach that works: use matrix math.
+        // Put translate FIRST in CSS (applied last in screen space):
+
+        const cx = bounds.centerX;
+        const cy = bounds.centerY;
+
+        // After rotate(90deg) around (0,0): point (cx, cy) → (cy, -cx)
+        // After scale(zoom): (cy*zoom, -cx*zoom)
+        // We want this at (usableCenterX, usableCenterY)
+        // translate is applied in screen space AFTER scale+rotate when written FIRST:
+        // CSS: translate(tx, ty) scale(zoom) rotate(90deg)
+        // Execution: rotate → scale → translate (in screen coords)
+        //
+        // NO — CSS transforms execute right-to-left but translate moves in the
+        // CURRENT (already-transformed) coordinate system.
+        //
+        // Let's just use a matrix. rotate(90deg) = [0, 1, -1, 0, 0, 0]
+        // scale(z) = [z, 0, 0, z, 0, 0]
+        // Combined: rotate then scale = [0, z, -z, 0, 0, 0]
+        // Point (cx, cy) maps to: (0*cx + -z*cy, z*cx + 0*cy) = (-z*cy, z*cx)
+        // We want (-z*cy + tx, z*cx + ty) = (usableCenterX, usableCenterY)
+        // tx = usableCenterX + z*cy
+        // ty = usableCenterY - z*cx
+
+        const tx = usableCenterX + zoom * cy;
+        const ty = usableCenterY - zoom * cx;
+
+        console.log(`[transform:portrait] center=(${cx},${cy}) usableCenter=${usableCenterX.toFixed(0)},${usableCenterY.toFixed(0)} tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} zoom=${zoom.toFixed(3)}`);
+
+        // Using matrix: scale(z) * rotate(90deg) = matrix(0, z, -z, 0, tx, ty)
+        return `matrix(0, ${zoom}, ${-zoom}, 0, ${tx.toFixed(1)}, ${ty.toFixed(1)})`;
+    }
+
+    // Normal (non-rotated) modes
     const tx = usableCenterX - scaledCenterX;
     const ty = usableCenterY - scaledCenterY;
 
