@@ -167,6 +167,12 @@ function stageToPosition(stageX: number, stageY: number, color?: string): Positi
  *  Doesn't affect positioning — just visual size around each element's center. */
 export const COMPONENT_SCALE = 1.3;
 
+/** How many extra pixels to push ALL seats outward from table center.
+ *  Positive = further from center (seats spread out, table feels bigger).
+ *  Negative = closer to center (seats tighter, table feels smaller).
+ *  0 = spec positions from issue #142 (no change). */
+const SEAT_SPREAD = 0;
+
 /** How far chips sit from seat toward table center (0 = at seat, 1 = at center) */
 const CHIP_DISTANCE = 0.4;
 
@@ -183,17 +189,33 @@ const TURN_ANIM_Y_OFFSET = 80;
 export type TableSize = 2 | 4 | 6 | 9;
 
 
-/** Get player seat positions for a given table size */
+/** Push a seat position outward from table center by SEAT_SPREAD pixels */
+function applySpread(sx: number, sy: number): [number, number] {
+    if (SEAT_SPREAD === 0) return [sx, sy];
+    const dx = sx - TABLE_CENTER_X;
+    const dy = sy - TABLE_CENTER_Y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist === 0) return [sx, sy];
+    return [sx + (dx / dist) * SEAT_SPREAD, sy + (dy / dist) * SEAT_SPREAD];
+}
+
+/** Get player seat positions for a given table size (with SEAT_SPREAD applied) */
 export function getSeatPositions(tableSize: TableSize): Position[] {
     const coords = SEAT_COORDS[tableSize];
     const colors = SEAT_COLORS[tableSize];
-    return coords.map(([x, y], i) => stageToPosition(x, y, colors[i]));
+    return coords.map(([x, y], i) => {
+        const [sx, sy] = applySpread(x, y);
+        return stageToPosition(sx, sy, colors[i]);
+    });
 }
 
-/** Get vacant seat positions (same as seat positions) */
+/** Get vacant seat positions (with SEAT_SPREAD applied) */
 export function getVacantPositions(tableSize: TableSize): Position[] {
     const coords = SEAT_COORDS[tableSize];
-    return coords.map(([x, y]) => stageToPosition(x, y));
+    return coords.map(([x, y]) => {
+        const [sx, sy] = applySpread(x, y);
+        return stageToPosition(sx, sy);
+    });
 }
 
 /**
@@ -204,7 +226,8 @@ export function getVacantPositions(tableSize: TableSize): Position[] {
 export function getChipPositions(tableSize: TableSize): ChipPosition[] {
     const coords = SEAT_COORDS[tableSize];
 
-    return coords.map(([sx, sy]) => {
+    return coords.map(([x, y]) => {
+        const [sx, sy] = applySpread(x, y);
         // Vector from seat toward table center
         const dx = TABLE_CENTER_X - sx;
         const dy = TABLE_CENTER_Y - sy;
@@ -236,7 +259,8 @@ export function getChipPositions(tableSize: TableSize): ChipPosition[] {
 export function getDealerPositions(tableSize: TableSize): Position[] {
     const coords = SEAT_COORDS[tableSize];
 
-    return coords.map(([sx, sy]) => {
+    return coords.map(([x, y]) => {
+        const [sx, sy] = applySpread(x, y);
         const dx = TABLE_CENTER_X - sx;
         const dy = TABLE_CENTER_Y - sy;
 
@@ -255,8 +279,8 @@ export function getDealerPositions(tableSize: TableSize): Position[] {
 export function getTurnAnimationPositions(tableSize: TableSize): Position[] {
     const coords = SEAT_COORDS[tableSize];
 
-    return coords.map(([sx, sy]) => {
-        // Shift down slightly so the ring appears below the player
+    return coords.map(([x, y]) => {
+        const [sx, sy] = applySpread(x, y);
         return stageToPosition(sx, sy + TURN_ANIM_Y_OFFSET);
     });
 }
@@ -267,7 +291,10 @@ export function getTurnAnimationPositions(tableSize: TableSize): Position[] {
  */
 export function getWinAnimationPositions(tableSize: TableSize): Position[] {
     const coords = SEAT_COORDS[tableSize];
-    return coords.map(([x, y]) => stageToPosition(x, y));
+    return coords.map(([x, y]) => {
+        const [sx, sy] = applySpread(x, y);
+        return stageToPosition(sx, sy);
+    });
 }
 
 // ─── Fine-Tuning Offsets ─────────────────────────────────────────────
@@ -454,10 +481,11 @@ const MAX_GLOBAL_SCALE = 2.0;
  * top:    cards (80px) + component centering (70px) + margin above topmost seat
  * bottom: badge + stack + progress bar below bottommost seat
  */
-const PLAYER_UI_PADDING = {
-    x: 80,
-    top: 160,
-    bottom: 100
+const PLAYER_UI_PADDING: Record<ViewportMode, { x: number; top: number; bottom: number }> = {
+    "desktop":          { x: 80, top: 200, bottom: 60 },   // more top (cards above seats), less bottom → table shifts DOWN
+    "tablet":           { x: 80, top: 200, bottom: 60 },
+    "mobile-landscape": { x: 60, top: 160, bottom: 30 },   // same pattern, tighter for mobile
+    "mobile-portrait":  { x: 60, top: 140, bottom: 40 },   // tighter for portrait rotation
 };
 
 export interface ContentBounds {
@@ -467,24 +495,28 @@ export interface ContentBounds {
     centerY: number;
 }
 
-/** Calculate the bounding box + center of all seat positions + player UI */
+/** Calculate the bounding box + center of all seat positions + player UI.
+ *  Uses per-viewport padding — desktop gets full room, mobile gets tighter fit. */
 export function getContentBounds(tableSize: TableSize): ContentBounds {
+    const mode = getViewportMode();
+    const pad = PLAYER_UI_PADDING[mode];
     const coords = SEAT_COORDS[tableSize];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const [x, y] of coords) {
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
+        const [sx, sy] = applySpread(x, y);
+        minX = Math.min(minX, sx);
+        maxX = Math.max(maxX, sx);
+        minY = Math.min(minY, sy);
+        maxY = Math.max(maxY, sy);
     }
     return {
-        width: (maxX - minX) + PLAYER_UI_PADDING.x * 2,
-        height: (maxY - minY) + PLAYER_UI_PADDING.top + PLAYER_UI_PADDING.bottom,
+        width: (maxX - minX) + pad.x * 2,
+        height: (maxY - minY) + pad.top + pad.bottom,
         // Center of the PADDED bounds (not just seats). Accounts for asymmetric
         // padding — more above (cards) than below (badges). Without this offset,
         // the top player cards get clipped by the header.
         centerX: (minX + maxX) / 2,
-        centerY: ((minY - PLAYER_UI_PADDING.top) + (maxY + PLAYER_UI_PADDING.bottom)) / 2
+        centerY: ((minY - pad.top) + (maxY + pad.bottom)) / 2
     };
 }
 
