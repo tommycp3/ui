@@ -26,14 +26,14 @@ export interface UseTableLayoutReturn {
 
 export const useTableLayout = (tableSize: TableSize): UseTableLayoutReturn => {
     const [viewportMode, setViewportMode] = useState(getViewportMode());
-    const [zoom, setZoom] = useState(calculateZoom());
+    const [zoom, setZoom] = useState(calculateZoom(tableSize));
     const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
 
     const refreshLayout = useCallback(() => {
         setViewportMode(getViewportMode());
-        setZoom(calculateZoom());
+        setZoom(calculateZoom(tableSize));
         setIsLandscape(window.innerWidth > window.innerHeight);
-    }, []);
+    }, [tableSize]);
 
     useEffect(() => {
         const handleResize = () => refreshLayout();

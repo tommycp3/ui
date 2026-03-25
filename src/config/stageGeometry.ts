@@ -436,41 +436,48 @@ const VIEWPORT_PARAMS: Record<ViewportMode, {
 const MIN_SCALE = 0.3;
 const MAX_GLOBAL_SCALE = 2.0;
 
-/**
- * Effective content dimensions including players that extend beyond the table surface.
- * The original zoom calc used TABLE_WIDTH (900) / TABLE_HEIGHT (450) which only
- * accounts for the green felt area. Players sit OUTSIDE the table, so on small
- * screens they get clipped. These constants measure the full seat-to-seat span:
- *
- *   CONTENT_HEIGHT: seats y=238→832 (594px) + ~56px player UI = 650px
- *   CONTENT_WIDTH:  seats x=296→1304 (1008px) + ~80px player UI each side = 1168px
- *
- * Used by calculateZoom() on mobile viewports only (desktop/tablet have enough room).
- */
-const CONTENT_HEIGHT = 650;
-const CONTENT_WIDTH = 1168;
+// ─── Auto-Fit: Dynamic Content Bounds ───────────────────────────────
+//
+// Instead of hardcoded content dimensions, we calculate the actual
+// bounding box from SEAT_COORDS for the current table size.
+// This means 9-seat, 6-seat, and 2-seat tables all auto-fit correctly.
 
-/** Calculate zoom level for the current viewport */
-export function calculateZoom(): number {
+/** Padding for player UI components that extend beyond the seat coordinate point.
+ *  These ensure the zoom calc "sees" the full player card/badge, not just the seat dot. */
+const PLAYER_UI_PADDING_X = 80;   // ~80px player card width on each side
+const PLAYER_UI_PADDING_Y = 60;   // ~60px player card/badge height top + bottom
+
+/** Calculate the bounding box of all seat positions + player UI for a given table size */
+export function getContentBounds(tableSize: TableSize): { width: number; height: number } {
+    const coords = SEAT_COORDS[tableSize];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [x, y] of coords) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+    }
+    return {
+        width: (maxX - minX) + PLAYER_UI_PADDING_X * 2,
+        height: (maxY - minY) + PLAYER_UI_PADDING_Y * 2
+    };
+}
+
+/** Calculate zoom level for the current viewport and table size.
+ *  Fits all player components within the available space (viewport minus padding).
+ *  maxScale acts as an optional upper bound to prevent the table being too large. */
+export function calculateZoom(tableSize: TableSize = 9): number {
     const mode = getViewportMode();
     const params = VIEWPORT_PARAMS[mode];
+    const bounds = getContentBounds(tableSize);
 
     const availableWidth = window.innerWidth - params.paddingH;
     const availableHeight = window.innerHeight - params.paddingV;
 
-    // On mobile, scale to fit the full seat-to-seat content bounds (CONTENT_WIDTH/HEIGHT)
-    // instead of just the table surface (TABLE_WIDTH/HEIGHT). This prevents player
-    // components at edge seats from being clipped outside the viewport.
-    const isMobile = (mode === "mobile-landscape" || mode === "mobile-portrait");
-    const effectiveWidth = isMobile ? CONTENT_WIDTH : TABLE_WIDTH;
-    const effectiveHeight = isMobile ? CONTENT_HEIGHT : TABLE_HEIGHT;
-
-    const scaleByWidth = availableWidth / effectiveWidth;
-    const scaleByHeight = availableHeight / effectiveHeight;
+    const scaleByWidth = availableWidth / bounds.width;
+    const scaleByHeight = availableHeight / bounds.height;
     const fitScale = Math.min(scaleByWidth, scaleByHeight);
 
-    // All viewports use the same logic: fit to available space, capped by maxScale.
-    // (Previously desktop had hardcoded 0.8 caps that ignored maxScale — removed.)
     const finalScale = Math.min(fitScale, params.maxScale);
 
     return Math.max(MIN_SCALE, Math.min(finalScale, MAX_GLOBAL_SCALE));
