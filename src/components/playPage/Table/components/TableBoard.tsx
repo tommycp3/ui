@@ -9,7 +9,7 @@
  */
 
 import React, { useMemo } from "react";
-import { getViewportMode } from "../../../../config/stageGeometry";
+import { getViewportMode, COMPONENT_SCALE } from "../../../../config/stageGeometry";
 import { getCardImageUrl, getCardBackUrl, CardBackStyle } from "../../../../utils/cardImages";
 import { PotDisplayValues } from "../../../../utils/potDisplayUtils";
 import OppositePlayerCards from "../../Card/OppositePlayerCards";
@@ -53,7 +53,9 @@ export const TableBoard: React.FC<TableBoardProps> = ({
     }, [communityCards, cardBackStyle]);
 
     const isPortrait = getViewportMode() === "mobile-portrait";
-    const counterRotate = isPortrait ? { transform: "rotate(-90deg)" } : undefined;
+    const counterRotate: React.CSSProperties = {
+        transform: [isPortrait ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ")
+    };
 
     return (
         <>

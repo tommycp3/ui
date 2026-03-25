@@ -1,6 +1,6 @@
 import * as React from "react";
 import { memo, useMemo, useCallback, useState, useEffect } from "react";
-import { getViewportMode } from "../../../config/stageGeometry";
+import { getViewportMode, COMPONENT_SCALE } from "../../../config/stageGeometry";
 import Badge from "../common/Badge";
 import ProgressBar from "../common/ProgressBar";
 import { useWinnerInfo } from "../../../hooks/game/useWinnerInfo";
@@ -197,7 +197,7 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
                 className={`${opacityClass} absolute flex flex-col justify-center w-[160px] h-[140px] mt-[40px] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer ${styles.secondaryText} ${styles.positionTransition}`}
                 style={containerStyle}
             >
-              <div style={getViewportMode() === "mobile-portrait" ? { transform: "rotate(-90deg)" } : undefined}>
+              <div style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }}>
                 {/* Development Mode Debug Info */}
                 {import.meta.env.VITE_NODE_ENV === "development" && (
                     <div className="absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap z-50 border border-green-400">

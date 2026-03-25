@@ -108,7 +108,7 @@ import { useGameStartCountdown } from "../../hooks/game/useGameStartCountdown";
 // Table Layout Configuration
 import { useTableLayout } from "../../hooks/game/useTableLayout";
 import { useVacantSeatData } from "../../hooks/game/useVacantSeatData";
-import { getViewportMode, type PositionArrays } from "../../config/stageGeometry";
+import { getViewportMode, COMPONENT_SCALE, type PositionArrays } from "../../config/stageGeometry";
 import CustomDealer from "../../assets/CustomDealer.svg";
 import { useDealerPosition } from "../../hooks/game/useDealerPosition";
 
@@ -932,7 +932,7 @@ const Table = React.memo(() => {
                                                 }}
                                             >
                                                 <img src={CustomDealer} alt="Dealer Button" className="w-full h-full"
-                                                     style={getViewportMode() === "mobile-portrait" ? { transform: "rotate(-90deg)" } : undefined} />
+                                                     style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }} />
                                             </div>
                                         );
                                     })()}
@@ -954,7 +954,7 @@ const Table = React.memo(() => {
                                                     transform: "translate(-50%, 50%)"
                                                 }}
                                             >
-                                                <div style={getViewportMode() === "mobile-portrait" ? { transform: "rotate(-90deg)" } : undefined}>
+                                                <div style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }}>
                                                     <Chip amount={chipAmount} />
                                                 </div>
                                             </div>
