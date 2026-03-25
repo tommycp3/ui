@@ -83,6 +83,10 @@ const TABLE_ORIGIN_Y = TABLE_CENTER_Y - TABLE_HEIGHT / 2;  // 310
 
 const SEAT_COLORS_2 = ["#4ade80", "#3b82f6"];
 
+const SEAT_COLORS_4 = [
+    "#4ade80", "#f97316", "#3b82f6", "#ec4899"
+];
+
 const SEAT_COLORS_6 = [
     "#4ade80", "#f97316", "#ef4444",
     "#3b82f6", "#8b5cf6", "#ec4899"
@@ -96,6 +100,7 @@ const SEAT_COLORS_9 = [
 
 const SEAT_COLORS: Record<number, string[]> = {
     2: SEAT_COLORS_2,
+    4: SEAT_COLORS_4,
     6: SEAT_COLORS_6,
     9: SEAT_COLORS_9
 };
@@ -107,6 +112,12 @@ const SEAT_COORDS: Record<number, [number, number][]> = {
     2: [
         [800, 832],     // Seat 1 - bottom-center
         [800, 238]      // Seat 2 - top-center
+    ],
+    4: [
+        [800, 832],     // Seat 1 - bottom-center
+        [1282.2, 535],  // Seat 2 - right-center
+        [800, 238],     // Seat 3 - top-center
+        [317.8, 535]    // Seat 4 - left-center
     ],
     6: [
         [800, 832],     // Seat 1 - bottom-center
@@ -164,14 +175,8 @@ const TURN_ANIM_Y_OFFSET = 80;
 
 // ─── Position Generators ─────────────────────────────────────────────
 
-export type TableSize = 2 | 6 | 9;
+export type TableSize = 2 | 4 | 6 | 9;
 
-/** Map any player count to the nearest supported table layout */
-export function normalizeTableSize(raw: number): TableSize {
-    if (raw <= 2) return 2;
-    if (raw <= 6) return 6;
-    return 9;
-}
 
 /** Get player seat positions for a given table size */
 export function getSeatPositions(tableSize: TableSize): Position[] {

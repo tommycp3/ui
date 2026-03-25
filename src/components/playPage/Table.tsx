@@ -456,7 +456,7 @@ const Table = React.memo(() => {
     // Ref to the table container div — geometry engine measures this for auto-fit
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
-    const tableLayout = useTableLayout((tableSize as 2 | 6 | 9) || 9, tableContainerRef);
+    const tableLayout = useTableLayout((tableSize as 2 | 4 | 6 | 9) || 9, tableContainerRef);
 
     // Add the useGameProgress hook
     const { isGameInProgress, handNumber, actionCount, nextToAct } = useGameProgress(id);
