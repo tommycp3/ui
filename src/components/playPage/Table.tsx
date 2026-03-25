@@ -108,7 +108,9 @@ import { useGameStartCountdown } from "../../hooks/game/useGameStartCountdown";
 // Table Layout Configuration
 import { useTableLayout } from "../../hooks/game/useTableLayout";
 import { useVacantSeatData } from "../../hooks/game/useVacantSeatData";
-import { getViewportMode } from "../../config/stageGeometry";
+import { getViewportMode, type PositionArrays } from "../../config/stageGeometry";
+import CustomDealer from "../../assets/CustomDealer.svg";
+import { useDealerPosition } from "../../hooks/game/useDealerPosition";
 
 // Turn Notification
 import { useTurnNotification } from "../../hooks/notifications/useTurnNotification";
@@ -139,8 +141,25 @@ const NetworkDisplay = memo(({ isMainnet = false }: NetworkDisplayProps) => {
 
 NetworkDisplay.displayName = "NetworkDisplay";
 
+// Global debug state — shared between LayoutDebugOverlay and Table component
+// Press D = draggable overlay, C = chip markers, B = dealer markers, S = seat markers
+let _debugChips = false;
+let _debugDealers = false;
+let _debugSeats = false;
+const debugListeners: Set<() => void> = new Set();
+function useDebugToggle() {
+    const [, forceUpdate] = useState(0);
+    useEffect(() => {
+        const cb = () => forceUpdate(n => n + 1);
+        debugListeners.add(cb);
+        return () => { debugListeners.delete(cb); };
+    }, []);
+    return { showChips: _debugChips, showDealers: _debugDealers, showSeats: _debugSeats };
+}
+
 /** DEBUG OVERLAY: Press 'D' to toggle. Shows draggable marker with coordinates.
- *  Helps communicate exact positions on any viewport. REMOVE after positioning is done. */
+ *  Press C = chip markers, B = dealer markers, S = seat markers.
+ *  REMOVE after positioning is done. */
 const LayoutDebugOverlay = () => {
     const [visible, setVisible] = useState(false);
     const [pos, setPos] = useState({ x: 200, y: 200 });
@@ -151,6 +170,9 @@ const LayoutDebugOverlay = () => {
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === "d" || e.key === "D") setVisible(v => !v);
+            if (e.key === "c" || e.key === "C") { _debugChips = !_debugChips; debugListeners.forEach(cb => cb()); }
+            if (e.key === "b" || e.key === "B") { _debugDealers = !_debugDealers; debugListeners.forEach(cb => cb()); }
+            if (e.key === "s" || e.key === "S") { _debugSeats = !_debugSeats; debugListeners.forEach(cb => cb()); }
         };
         window.addEventListener("keydown", handleKey);
         return () => window.removeEventListener("keydown", handleKey);
@@ -221,15 +243,83 @@ const LayoutDebugOverlay = () => {
                 pointerEvents: "auto",
                 minWidth: 220
             }}>
-                <div style={{ color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>DEBUG OVERLAY (press D to hide)</div>
+                <div style={{ color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>DEBUG (D=drag C=chips B=dealer S=seats)</div>
                 <div>Viewport: {window.innerWidth}x{window.innerHeight}</div>
                 <div>Mouse: {mousePos.x}, {mousePos.y}</div>
                 <div style={{ color: "#4ade80" }}>Marker: {pos.x}, {pos.y}</div>
                 <div>From bottom: {window.innerHeight - pos.y}px</div>
                 <div>From right: {window.innerWidth - pos.x}px</div>
+                <div style={{ marginTop: 4, borderTop: "1px solid #444", paddingTop: 4 }}>
+                    <span style={{ color: _debugChips ? "#4ade80" : "#666" }}>C:chips{_debugChips ? " ON" : ""} </span>
+                    <span style={{ color: _debugDealers ? "#fbbf24" : "#666" }}>B:dealer{_debugDealers ? " ON" : ""} </span>
+                    <span style={{ color: _debugSeats ? "#60a5fa" : "#666" }}>S:seats{_debugSeats ? " ON" : ""}</span>
+                </div>
                 <div style={{ marginTop: 4, color: "#93c5fd", fontSize: 10 }}>Drag the red dot to mark positions</div>
             </div>
         </div>
+    );
+};
+
+/** DEBUG: Renders colored markers at chip/dealer/seat positions inside the table div.
+ *  Toggle with C (chips), B (dealers), S (seats). REMOVE after positioning is done. */
+const PositionDebugMarkers: React.FC<{ positions: PositionArrays }> = ({ positions }) => {
+    const debug = useDebugToggle();
+
+    const markerStyle = (left: string, top: string, color: string, label: string, useBottom = false) => (
+        <div
+            key={`${label}-${left}-${top}`}
+            style={{
+                position: "absolute",
+                left: left,
+                ...(useBottom ? { bottom: top } : { top: top }),
+                transform: "translate(-50%, -50%)",
+                zIndex: 99999,
+                pointerEvents: "none"
+            }}
+        >
+            <div style={{
+                width: 24,
+                height: 24,
+                borderRadius: "50%",
+                backgroundColor: color,
+                border: "2px solid white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 0 8px rgba(0,0,0,0.5)"
+            }}>
+                <span style={{ color: "white", fontSize: 8, fontWeight: "bold" }}>{label}</span>
+            </div>
+            <div style={{
+                position: "absolute",
+                top: 26,
+                left: "50%",
+                transform: "translateX(-50%)",
+                backgroundColor: "rgba(0,0,0,0.8)",
+                color: "white",
+                fontSize: 8,
+                padding: "1px 4px",
+                borderRadius: 3,
+                whiteSpace: "nowrap",
+                fontFamily: "monospace"
+            }}>
+                {left},{top}
+            </div>
+        </div>
+    );
+
+    return (
+        <>
+            {debug.showChips && positions.chips.map((chip, i) =>
+                markerStyle(chip.left, chip.bottom, "#4ade80", `C${i + 1}`, true)
+            )}
+            {debug.showDealers && positions.dealers.map((d, i) =>
+                markerStyle(d.left, d.top, "#fbbf24", `D${i + 1}`)
+            )}
+            {debug.showSeats && positions.players.map((p, i) =>
+                markerStyle(p.left, p.top, "#60a5fa", `S${i + 1}`)
+            )}
+        </>
     );
 };
 
@@ -361,6 +451,7 @@ const Table = React.memo(() => {
 
     // Add the useTableState hook to get table state properties
     const { tableSize } = useTableState();
+    const { dealerSeat } = useDealerPosition();
 
     // Ref to the table container div — geometry engine measures this for auto-fit
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -819,30 +910,54 @@ const Table = React.memo(() => {
                                                 cardBackStyle={cardBackStyle}
                                             />
 
-                                            {/*//! CHIP - Hide when sit-and-go is waiting for players */}
-                                            {!isSitAndGoWaitingForPlayers && tableLayout.positions.chips.map((position, index) => {
-                                                const chipAmount = getChipAmount(index + 1);
-
-                                                // DON'T RENDER CHIP IF AMOUNT IS 0
-                                                if (chipAmount === "0" || chipAmount === "" || !chipAmount) {
-                                                    return null;
-                                                }
-
-                                                return (
-                                                    <div
-                                                        key={`key-${index}`}
-                                                        className="chip-position"
-                                                        style={{
-                                                            left: position.left,
-                                                            bottom: position.bottom
-                                                        }}
-                                                    >
-                                                        <Chip amount={chipAmount} />
-                                                    </div>
-                                                );
-                                            })}
+                                            {/* Chips moved outside this transformed div — see below dealer button */}
                                         </div>
                                     </div>
+                                    {/* Dealer Button — rendered at table level using geometry positions directly.
+                                        Same pattern as chips: absolute position from geometry engine.
+                                        dealerSeat is 1-based seat number from game state. */}
+                                    {(() => {
+                                        const dIdx = dealerSeat != null && dealerSeat > 0 ? dealerSeat - 1 : -1;
+                                        const dPos = dIdx >= 0 ? tableLayout.positions.dealers[dIdx] : null;
+                                        if (dIdx === -1) console.log(`[dealer] no dealer seat (dealerSeat=${dealerSeat})`);
+                                        else console.log(`[dealer] seat=${dealerSeat} idx=${dIdx} pos=${dPos?.left},${dPos?.top}`);
+                                        if (!dPos) return null;
+                                        return (
+                                            <div
+                                                className="absolute w-12 h-12 z-[25]"
+                                                style={{
+                                                    left: dPos.left,
+                                                    top: dPos.top,
+                                                    transform: "translate(-50%, -50%)"
+                                                }}
+                                            >
+                                                <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/*//! CHIPS — rendered at table level using geometry positions.
+                                        Moved out of the transformed oval div so coordinates are correct. */}
+                                    {!isSitAndGoWaitingForPlayers && tableLayout.positions.chips.map((position, index) => {
+                                        const chipAmount = getChipAmount(index + 1);
+                                        // DEBUG: log all chip amounts to verify data
+                                        if (index === 0) console.log(`[chips] seat amounts:`, Array.from({length: 9}, (_, i) => `S${i+1}=${getChipAmount(i+1) || "0"}`).join(" "));
+                                        if (chipAmount === "0" || chipAmount === "" || !chipAmount) return null;
+                                        return (
+                                            <div
+                                                key={`chip-${index}`}
+                                                className="absolute z-[25]"
+                                                style={{
+                                                    left: position.left,
+                                                    bottom: position.bottom,
+                                                    transform: "translate(-50%, 50%)"
+                                                }}
+                                            >
+                                                <Chip amount={chipAmount} />
+                                            </div>
+                                        );
+                                    })}
+
                                     <PlayerSeating
                                         tableLayout={tableLayout}
                                         tableSize={tableSize}
@@ -857,6 +972,9 @@ const Table = React.memo(() => {
                                         cardBackStyle={cardBackStyle}
                                         updateBalanceOnPlayerJoin={updateBalanceOnPlayerJoin}
                                     />
+
+                                    {/* DEBUG: Position markers (C=chips, B=dealers, S=seats) */}
+                                    <PositionDebugMarkers positions={tableLayout.positions} />
                                 </div>
                             </div>
                         </div>

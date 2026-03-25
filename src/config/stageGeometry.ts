@@ -155,9 +155,9 @@ function stageToPosition(stageX: number, stageY: number, color?: string): Positi
 const CHIP_DISTANCE = 0.4;
 
 /** How far dealer button sits from seat toward table center.
- *  Increased from 0.3 → 0.45 so edge seats (especially seat 7/8) have
- *  dealer buttons ON the table surface, not floating outside it. */
-const DEALER_DISTANCE = 0.3;
+ *  0.5 = halfway between seat and center — ensures button is ON the table surface
+ *  for all seats including top (5,6) and edge (7,8) positions. */
+const DEALER_DISTANCE = 0.45;
 
 /** How many pixels down the turn animation ring sits below the player */
 const TURN_ANIM_Y_OFFSET = 80;

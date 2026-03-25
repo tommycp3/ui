@@ -236,16 +236,7 @@ const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo
                         {seatText.subtitle && <div className="text-base sm:text-xs whitespace-nowrap">{seatText.subtitle}</div>}
                     </div>
 
-                    {/* Dealer Button — positioned by geometry engine (stageGeometry.ts DEALER_DISTANCE) */}
-                    {isDealer && dealerPosition && (
-                        <div className="absolute w-12 h-12 z-20"
-                             style={{
-                                 left: `${parseFloat(dealerPosition.left) - parseFloat(left || "0")}px`,
-                                 top: `${parseFloat(dealerPosition.top) - parseFloat(top || "0")}px`
-                             }}>
-                            <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
-                        </div>
-                    )}
+                    {/* Dealer Button — now rendered at table level in Table.tsx using geometry positions directly */}
                 </div>
 
                 {/* Buy-in modal - using portal to render at document body */}
