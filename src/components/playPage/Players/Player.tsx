@@ -169,6 +169,8 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
                             NFT
                         </div>
                     )}
+                    {/* Spacer preserves the 55px flow height the old status bar occupied */}
+                    <div className="w-full h-[55px]" />
                     <div className="absolute top-[-10px] w-full">
                         <Badge
                             count={index}

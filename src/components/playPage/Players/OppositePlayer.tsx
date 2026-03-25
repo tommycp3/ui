@@ -162,6 +162,8 @@ const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, i
                             NFT
                         </div>
                     )}
+                    {/* Spacer preserves the 55px flow height the old status bar occupied */}
+                    <div className="w-full h-[55px]" />
                     <div className="absolute top-[-10px] w-full">
                         <Badge
                             count={index}

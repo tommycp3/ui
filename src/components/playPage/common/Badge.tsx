@@ -36,6 +36,9 @@ const Badge: React.FC<BadgeProps> = React.memo(({
     isWinner, winnerAmount, isTurnTimerActive,
     round, isFolded, isAllIn, isSeated, isSittingOut, playerEquity
 }) => {
+    // Track previous banner mode so we can detect timer→action transitions
+    const prevBannerModeRef = React.useRef<string>("hidden");
+
     // Get game format to determine if it's a tournament-style game
     const { gameFormat } = useGameStateContext();
     const isTournament = isTournamentFormat(gameFormat);
@@ -104,12 +107,27 @@ const Badge: React.FC<BadgeProps> = React.memo(({
             boxShadow: `0 4px 12px ${bannerBg}40, 0 2px 4px rgba(0,0,0,0.3)`
         };
 
+    // When the banner was already showing (e.g. timer) and an action arrives,
+    // skip the shell dropdown animation — just swap the content inside.
+    const wasAlreadyVisible = prevBannerModeRef.current !== "hidden";
+    const isTransitionFromTimer = wasAlreadyVisible
+        && (bannerMode === "action" || bannerMode === "seat-join")
+        && !isTransientAnimatingOut;
+
+    // Update the ref AFTER we've read the previous value
+    React.useEffect(() => {
+        prevBannerModeRef.current = bannerMode;
+    }, [bannerMode]);
+
     // --- Transient (action / seat-join) enter/exit CSS class ---
+    // If shell was already visible (timer was showing), skip the enter animation.
     const transientAnimClass = isTransientAnimatingOut
         ? "action-display-exit"
-        : (bannerMode === "action" || bannerMode === "seat-join")
-            ? "action-display-enter"
-            : "";
+        : isTransitionFromTimer
+            ? ""  // shell stays put — no enter animation needed
+            : (bannerMode === "action" || bannerMode === "seat-join")
+                ? "action-display-enter"
+                : "";
 
     // Get place suffix (1st, 2nd, 3rd, 4th)
     const getPlaceSuffix = (place: number) => {
@@ -229,7 +247,9 @@ const Badge: React.FC<BadgeProps> = React.memo(({
                     }`}
                     style={bannerStyle}
                 >
-                    {renderBannerContent()}
+                    <div className={`seat-banner-content-inner ${isTransitionFromTimer ? "seat-banner-content-swap" : ""}`}>
+                        {renderBannerContent()}
+                    </div>
                 </div>
             </div>
 

@@ -132,6 +132,15 @@
   color: #ffffff;
 }
 
+/* Inner wrapper — must fill parent flex column so children's mt-auto works */
+.seat-banner-content-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
 /* Content swap animation — used when shell is already visible (e.g. timer→action) */
 .seat-banner-content-swap {
   animation: seatBannerContentSwap 0.25s ease-out;
