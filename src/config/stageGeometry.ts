@@ -157,7 +157,7 @@ const CHIP_DISTANCE = 0.4;
 /** How far dealer button sits from seat toward table center.
  *  Increased from 0.3 → 0.45 so edge seats (especially seat 7/8) have
  *  dealer buttons ON the table surface, not floating outside it. */
-const DEALER_DISTANCE = 0.4;
+const DEALER_DISTANCE = 0.3;
 
 /** How many pixels down the turn animation ring sits below the player */
 const TURN_ANIM_Y_OFFSET = 80;
@@ -410,22 +410,22 @@ const VIEWPORT_PARAMS: Record<ViewportMode, {
     "desktop": {
         paddingH: 40,
         paddingV: 20,
-        footerOverlay: 0        // footer is in normal flow, container already excludes it
+        footerOverlay: 160      // footer is fixed overlay (160px) on desktop
     },
     "tablet": {
         paddingH: 40,
         paddingV: 20,
-        footerOverlay: 0
+        footerOverlay: 160      // same as desktop
     },
     "mobile-landscape": {
         paddingH: 20,
         paddingV: 10,
-        footerOverlay: 80       // footer is position:fixed, overlays the container
+        footerOverlay: 80       // mobile landscape footer is 80px
     },
     "mobile-portrait": {
         paddingH: 20,
         paddingV: 10,
-        footerOverlay: 0        // footer is in normal flow
+        footerOverlay: 160      // footer is fixed overlay (160px) on portrait too
     }
 };
 

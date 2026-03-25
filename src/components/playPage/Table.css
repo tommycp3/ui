@@ -95,7 +95,8 @@
 
 /* New classes for extracted inline styles */
 /* table-container: flex column so children (header, body, footer) share the 100vh.
-   overflow: hidden prevents page scrollbars from the 1600x850 zoom wrapper. */
+   overflow: hidden prevents page scrollbars from the 1600x850 zoom wrapper extending
+   beyond viewport. The footer is inside this container and properly sized by flex. */
 .table-container {
     position: relative;
     height: 100vh;

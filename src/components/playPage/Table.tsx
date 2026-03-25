@@ -139,6 +139,100 @@ const NetworkDisplay = memo(({ isMainnet = false }: NetworkDisplayProps) => {
 
 NetworkDisplay.displayName = "NetworkDisplay";
 
+/** DEBUG OVERLAY: Press 'D' to toggle. Shows draggable marker with coordinates.
+ *  Helps communicate exact positions on any viewport. REMOVE after positioning is done. */
+const LayoutDebugOverlay = () => {
+    const [visible, setVisible] = useState(false);
+    const [pos, setPos] = useState({ x: 200, y: 200 });
+    const [dragging, setDragging] = useState(false);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [vpMode, setVpMode] = useState("");
+
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === "d" || e.key === "D") setVisible(v => !v);
+        };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, []);
+
+    useEffect(() => {
+        if (!visible) return;
+        const handleMove = (e: MouseEvent) => {
+            setMousePos({ x: e.clientX, y: e.clientY });
+            if (dragging) setPos({ x: e.clientX, y: e.clientY });
+        };
+        const handleUp = () => setDragging(false);
+        window.addEventListener("mousemove", handleMove);
+        window.addEventListener("mouseup", handleUp);
+        setVpMode(`${window.innerWidth}x${window.innerHeight}`);
+        return () => {
+            window.removeEventListener("mousemove", handleMove);
+            window.removeEventListener("mouseup", handleUp);
+        };
+    }, [visible, dragging]);
+
+    if (!visible) return null;
+
+    const s = (key: string, val: string | number) => (
+        <span style={{ color: "#fbbf24" }}>{key}:</span>
+    );
+
+    return (
+        <div style={{ position: "fixed", inset: 0, zIndex: 999999, pointerEvents: "none" }}>
+            {/* Crosshair lines */}
+            <div style={{ position: "absolute", left: pos.x, top: 0, width: 1, height: "100%", backgroundColor: "rgba(255,0,0,0.4)" }} />
+            <div style={{ position: "absolute", top: pos.y, left: 0, height: 1, width: "100%", backgroundColor: "rgba(255,0,0,0.4)" }} />
+
+            {/* Draggable marker */}
+            <div
+                onMouseDown={(e) => { e.preventDefault(); setDragging(true); }}
+                style={{
+                    position: "absolute",
+                    left: pos.x - 15,
+                    top: pos.y - 15,
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    backgroundColor: "rgba(255, 0, 0, 0.8)",
+                    border: "2px solid white",
+                    cursor: "grab",
+                    pointerEvents: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                }}
+            >
+                <span style={{ color: "white", fontSize: 10, fontWeight: "bold" }}>+</span>
+            </div>
+
+            {/* Info panel */}
+            <div style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                backgroundColor: "rgba(0,0,0,0.85)",
+                color: "white",
+                padding: "8px 12px",
+                borderRadius: 8,
+                fontFamily: "monospace",
+                fontSize: 12,
+                lineHeight: 1.6,
+                pointerEvents: "auto",
+                minWidth: 220
+            }}>
+                <div style={{ color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>DEBUG OVERLAY (press D to hide)</div>
+                <div>Viewport: {window.innerWidth}x{window.innerHeight}</div>
+                <div>Mouse: {mousePos.x}, {mousePos.y}</div>
+                <div style={{ color: "#4ade80" }}>Marker: {pos.x}, {pos.y}</div>
+                <div>From bottom: {window.innerHeight - pos.y}px</div>
+                <div>From right: {window.innerWidth - pos.x}px</div>
+                <div style={{ marginTop: 4, color: "#93c5fd", fontSize: 10 }}>Drag the red dot to mark positions</div>
+            </div>
+        </div>
+    );
+};
+
 
 const Table = React.memo(() => {
     const { id } = useParams<{ id: string }>();
@@ -624,6 +718,10 @@ const Table = React.memo(() => {
 
     return (
         <div className="table-container">
+            {/* DEBUG OVERLAY: Press 'D' to toggle. Draggable marker shows coordinates.
+                Remove after positioning is finalized. */}
+            <LayoutDebugOverlay />
+
             {/* Temporary Color Debug Component */}
             {/* <ColorDebug /> */}
 
@@ -769,25 +867,22 @@ const Table = React.memo(() => {
                     </div>
                     {/* Live Hand Strength Display */}
                     <LiveHandStrengthDisplay />
-
-                    {/*//! FOOTER - Adjusted for mobile landscape */}
-                    <div
-                        className={`w-full flex justify-center items-center z-[10] ${
-                            isMobileLandscape
-                                ? "h-[80px] fixed bottom-0 left-0 right-0 bg-black bg-opacity-50 backdrop-blur-sm"
-                                : "h-[100px] bg-transparent"
-                        }`}
-                    >
-                        <div className={`w-full flex justify-center items-center h-full ${isMobileLandscape ? "max-w-[500px] px-2" : "max-w-[700px]"}`}>
-                            <PokerActionPanel onTransactionSubmitted={handleTransactionSubmitted} />
-                        </div>
-                        {/* <div className="w-full h-[400px] flex justify-center overflow-y-auto">
-                            <Footer2 tableId={id} />
-                        </div> */}
-                    </div>
                 </div>
                 {/*//! ACTION LOG OVERLAY */}
                 <TableSidebar isOpen={openSidebar} />
+            </div>
+
+            {/*//! FOOTER - Fixed overlay on ALL viewports. OUTSIDE the body-container
+                so no ancestor transform/transition breaks position:fixed.
+                The geometry engine accounts for this via footerOverlay in VIEWPORT_PARAMS. */}
+            <div
+                className={`w-full flex justify-center items-center z-[50] fixed bottom-0 left-0 right-0 bg-black bg-opacity-50 backdrop-blur-sm ${
+                    isMobileLandscape ? "h-[80px]" : "h-[160px]"
+                }`}
+            >
+                <div className={`w-full flex justify-center items-center h-full ${isMobileLandscape ? "max-w-[500px] px-2" : "max-w-[700px]"}`}>
+                    <PokerActionPanel onTransactionSubmitted={handleTransactionSubmitted} />
+                </div>
             </div>
 
             {/* Status Messages */}
