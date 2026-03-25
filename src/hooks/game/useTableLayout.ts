@@ -1,11 +1,12 @@
 /**
- * Hook for managing table layout configuration
+ * Hook for managing table layout configuration.
  *
- * Uses the stageGeometry engine to calculate positions from the spec's
- * stadium-intersection model instead of hardcoded position arrays.
+ * Measures the ACTUAL parent container (via ref) and passes its dimensions
+ * to the geometry engine. Uses useLayoutEffect for synchronous measurement
+ * before first paint, and reads ref directly to avoid stale state.
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useLayoutEffect, useCallback, useMemo, type RefObject } from "react";
 import {
     type TableSize,
     type PositionArrays,
@@ -24,18 +25,26 @@ export interface UseTableLayoutReturn {
     refreshLayout: () => void;
 }
 
-export const useTableLayout = (tableSize: TableSize): UseTableLayoutReturn => {
+export const useTableLayout = (
+    tableSize: TableSize,
+    containerRef?: RefObject<HTMLDivElement | null>
+): UseTableLayoutReturn => {
     const [viewportMode, setViewportMode] = useState(getViewportMode());
-    const [zoom, setZoom] = useState(calculateZoom(tableSize));
+    // State only used to trigger re-renders on resize — actual values read from ref
+    const [, setResizeTick] = useState(0);
     const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
 
     const refreshLayout = useCallback(() => {
         setViewportMode(getViewportMode());
-        setZoom(calculateZoom(tableSize));
         setIsLandscape(window.innerWidth > window.innerHeight);
-    }, [tableSize]);
+        setResizeTick(t => t + 1); // Force re-render so zoom/transform recalculate from ref
+    }, []);
 
-    useEffect(() => {
+    // useLayoutEffect fires synchronously BEFORE the browser paints.
+    // This ensures the first visible frame uses the real container dimensions.
+    useLayoutEffect(() => {
+        refreshLayout();
+
         const handleResize = () => refreshLayout();
         const handleOrientationChange = () => setTimeout(refreshLayout, 100);
 
@@ -50,7 +59,14 @@ export const useTableLayout = (tableSize: TableSize): UseTableLayoutReturn => {
 
     const positions = useMemo(() => getAllPositions(tableSize), [tableSize]);
 
-    const tableTransform = getTableTransform(zoom);
+    // Read container dimensions DIRECTLY from the ref on every render.
+    // This avoids stale state — the ref always has the current DOM value.
+    const el = containerRef?.current;
+    const cw = el?.offsetWidth ?? window.innerWidth;
+    const ch = el?.offsetHeight ?? window.innerHeight;
+
+    const zoom = calculateZoom(tableSize, cw, ch);
+    const tableTransform = getTableTransform(zoom, tableSize, cw, ch);
 
     return {
         viewportMode,

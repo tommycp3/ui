@@ -43,7 +43,7 @@
  * - ActionsLog: Game history
  */
 
-import { useEffect, useState, useMemo, useCallback, memo } from "react";
+import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { isSitAndGoFormat, isTournamentFormat } from "../../utils/gameFormatUtils";
 import { formatPotDisplay, formatChipCount } from "../../utils/potDisplayUtils";
 import PokerActionPanel from "../Footer";
@@ -268,7 +268,10 @@ const Table = React.memo(() => {
     // Add the useTableState hook to get table state properties
     const { tableSize } = useTableState();
 
-    const tableLayout = useTableLayout((tableSize as 2 | 6 | 9) || 9);
+    // Ref to the table container div — geometry engine measures this for auto-fit
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    const tableLayout = useTableLayout((tableSize as 2 | 6 | 9) || 9, tableContainerRef);
 
     // Add the useGameProgress hook
     const { isGameInProgress, handNumber, actionCount, nextToAct } = useGameProgress(id);
@@ -694,7 +697,7 @@ const Table = React.memo(() => {
                     {/* Static base gradient - mouse tracking removed for performance */}
                     <div className="background-base-static" />
                     {/*//! TABLE */}
-                    <div className="flex-grow flex flex-col align-center justify-center min-h-[calc(100vh-150px)] sm:min-h-[calc(100vh-350px)] z-[0] relative">
+                    <div ref={tableContainerRef} className="flex-grow flex flex-col align-center justify-center z-[0] relative">
                         {/* Hexagon pattern overlay */}
 
                         <div
@@ -772,7 +775,7 @@ const Table = React.memo(() => {
                         className={`w-full flex justify-center items-center z-[10] ${
                             isMobileLandscape
                                 ? "h-[80px] fixed bottom-0 left-0 right-0 bg-black bg-opacity-50 backdrop-blur-sm"
-                                : "h-[200px] sm:h-[250px] bg-transparent"
+                                : "h-[100px] bg-transparent"
                         }`}
                     >
                         <div className={`w-full flex justify-center items-center h-full ${isMobileLandscape ? "max-w-[500px] px-2" : "max-w-[700px]"}`}>

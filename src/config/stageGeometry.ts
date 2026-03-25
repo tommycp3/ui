@@ -391,45 +391,41 @@ export function getViewportMode(): ViewportMode {
 }
 
 /**
- * Scaling parameters per viewport mode.
+ * Viewport parameters — PURE FUNCTIONAL.
  *
- * maxScale:   Upper bound on zoom — prevents table being too large for the viewport.
- * paddingH:   Horizontal px reserved (split left/right) before fitting the table.
- * paddingV:   Vertical px reserved (accounts for header + footer) before fitting.
- * translateY: Vertical shift as % of wrapper height (850px). -50% = true center.
- *             Values closer to 0% push the table DOWN in its parent container.
- *             Adjusted per mode because the parent div height differs from the
- *             visible play area (header/footer steal space that the parent ignores).
+ * paddingH:      horizontal breathing room within the container (total, split left/right)
+ * paddingV:      vertical breathing room within the container (total, split top/bottom)
+ * footerOverlay: px height of any FIXED overlay footer that sits ON TOP of the container.
+ *                Only mobile-landscape has this (80px fixed footer). All other viewports
+ *                have the footer in normal flex flow, so the container already excludes it.
+ *
+ * Container dimensions are MEASURED from the actual parent div (via ref),
+ * not guessed from window.innerHeight. This eliminates all header/footer guesswork.
  */
 const VIEWPORT_PARAMS: Record<ViewportMode, {
-    maxScale: number;
     paddingH: number;
     paddingV: number;
-    translateY: string;
+    footerOverlay: number;
 }> = {
     "desktop": {
-        maxScale: 2,
-        paddingH: 200,
-        paddingV: 300,
-        translateY: "-50%"      // true center — desktop has room to spare
+        paddingH: 40,
+        paddingV: 20,
+        footerOverlay: 0        // footer is in normal flow, container already excludes it
     },
     "tablet": {
-        maxScale: 0.8,
-        paddingH: 100,
-        paddingV: 200,
-        translateY: "-50%"      // true center — tablet has room to spare
+        paddingH: 40,
+        paddingV: 20,
+        footerOverlay: 0
     },
     "mobile-landscape": {
-        maxScale: 0.38,         // was 0.7 — far too large for ~390px viewport height
-        paddingH: 40,           // was 50 — reclaimed 10px horizontal
-        paddingV: 120,          // was 100 — increased to reserve space for header (40px) + footer (80px)
-        translateY: "-35%"      // was "-50%" — parent is taller than visible area, so -50% pushes table above viewport. -35% compensates.
+        paddingH: 20,
+        paddingV: 10,
+        footerOverlay: 80       // footer is position:fixed, overlays the container
     },
     "mobile-portrait": {
-        maxScale: 0.35,         // was 0.5 — too large for 390px viewport width
-        paddingH: 20,           // unchanged
-        paddingV: 300,          // was 150 — increased to reserve space for header (60px) + footer (200px) + breathing room
-        translateY: "-30%"      // was "-50%" — same parent-height issue as landscape, needs more downward push
+        paddingH: 20,
+        paddingV: 10,
+        footerOverlay: 0        // footer is in normal flow
     }
 };
 
@@ -438,17 +434,31 @@ const MAX_GLOBAL_SCALE = 2.0;
 
 // ─── Auto-Fit: Dynamic Content Bounds ───────────────────────────────
 //
-// Instead of hardcoded content dimensions, we calculate the actual
-// bounding box from SEAT_COORDS for the current table size.
-// This means 9-seat, 6-seat, and 2-seat tables all auto-fit correctly.
+// Calculates the bounding box from SEAT_COORDS for the current table size.
+// Includes padding for player UI components that extend beyond seat points.
+// 9-seat, 6-seat, and 2-seat tables all auto-fit correctly.
 
-/** Padding for player UI components that extend beyond the seat coordinate point.
- *  These ensure the zoom calc "sees" the full player card/badge, not just the seat dot. */
-const PLAYER_UI_PADDING_X = 80;   // ~80px player card width on each side
-const PLAYER_UI_PADDING_Y = 60;   // ~60px player card/badge height top + bottom
+/**
+ * Padding for player UI that extends beyond seat coordinate points.
+ * x:      player component width extending left/right of outermost seats
+ * top:    cards (80px) + component centering (70px) + margin above topmost seat
+ * bottom: badge + stack + progress bar below bottommost seat
+ */
+const PLAYER_UI_PADDING = {
+    x: 80,
+    top: 160,
+    bottom: 100
+};
 
-/** Calculate the bounding box of all seat positions + player UI for a given table size */
-export function getContentBounds(tableSize: TableSize): { width: number; height: number } {
+export interface ContentBounds {
+    width: number;
+    height: number;
+    centerX: number;   // content center in stage coords (for pixel-based positioning)
+    centerY: number;
+}
+
+/** Calculate the bounding box + center of all seat positions + player UI */
+export function getContentBounds(tableSize: TableSize): ContentBounds {
     const coords = SEAT_COORDS[tableSize];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const [x, y] of coords) {
@@ -458,34 +468,74 @@ export function getContentBounds(tableSize: TableSize): { width: number; height:
         maxY = Math.max(maxY, y);
     }
     return {
-        width: (maxX - minX) + PLAYER_UI_PADDING_X * 2,
-        height: (maxY - minY) + PLAYER_UI_PADDING_Y * 2
+        width: (maxX - minX) + PLAYER_UI_PADDING.x * 2,
+        height: (maxY - minY) + PLAYER_UI_PADDING.top + PLAYER_UI_PADDING.bottom,
+        // Center of the PADDED bounds (not just seats). Accounts for asymmetric
+        // padding — more above (cards) than below (badges). Without this offset,
+        // the top player cards get clipped by the header.
+        centerX: (minX + maxX) / 2,
+        centerY: ((minY - PLAYER_UI_PADDING.top) + (maxY + PLAYER_UI_PADDING.bottom)) / 2
     };
 }
 
-/** Calculate zoom level for the current viewport and table size.
- *  Fits all player components within the available space (viewport minus padding).
- *  maxScale acts as an optional upper bound to prevent the table being too large. */
-export function calculateZoom(tableSize: TableSize = 9): number {
+/**
+ * Calculate zoom level to fit all content within the container.
+ * containerWidth/Height come from the ACTUAL measured parent div (via ref).
+ * footerOverlay is subtracted for mobile-landscape where the footer overlays the container.
+ */
+export function calculateZoom(
+    tableSize: TableSize,
+    containerWidth: number,
+    containerHeight: number
+): number {
     const mode = getViewportMode();
     const params = VIEWPORT_PARAMS[mode];
     const bounds = getContentBounds(tableSize);
 
-    const availableWidth = window.innerWidth - params.paddingH;
-    const availableHeight = window.innerHeight - params.paddingV;
+    // Usable space = container minus any fixed overlay minus breathing room
+    const usableWidth = containerWidth - params.paddingH;
+    const usableHeight = containerHeight - params.footerOverlay - params.paddingV;
 
-    const scaleByWidth = availableWidth / bounds.width;
-    const scaleByHeight = availableHeight / bounds.height;
+    const scaleByWidth = usableWidth / bounds.width;
+    const scaleByHeight = usableHeight / bounds.height;
     const fitScale = Math.min(scaleByWidth, scaleByHeight);
 
-    const finalScale = Math.min(fitScale, params.maxScale);
+    const result = Math.max(MIN_SCALE, Math.min(fitScale, MAX_GLOBAL_SCALE));
 
-    return Math.max(MIN_SCALE, Math.min(finalScale, MAX_GLOBAL_SCALE));
+    // DEBUG: remove once positioning is dialled in
+    console.log(`[zoom] mode=${mode} tableSize=${tableSize} container=${containerWidth}x${containerHeight} usable=${usableWidth.toFixed(0)}x${usableHeight.toFixed(0)} bounds=${bounds.width.toFixed(0)}x${bounds.height.toFixed(0)} scaleW=${scaleByWidth.toFixed(3)} scaleH=${scaleByHeight.toFixed(3)} → zoom=${result.toFixed(3)}`);
+
+    return result;
 }
 
-/** Build CSS transform string for the table wrapper */
-export function getTableTransform(zoom: number): string {
+/**
+ * Build CSS transform — pixel-based, no percentages.
+ * Centers the content within the measured container.
+ * CSS wrapper must have: top:0; left:0; transform-origin: 0 0;
+ */
+export function getTableTransform(
+    zoom: number,
+    tableSize: TableSize,
+    containerWidth: number,
+    containerHeight: number
+): string {
     const mode = getViewportMode();
     const params = VIEWPORT_PARAMS[mode];
-    return `translate(-50%, ${params.translateY}) scale(${zoom})`;
+    const bounds = getContentBounds(tableSize);
+
+    // Center of the usable area within the container
+    const usableCenterX = containerWidth / 2;
+    const usableCenterY = (containerHeight - params.footerOverlay) / 2;
+
+    // Content center after scaling (transform-origin: 0 0)
+    const scaledCenterX = bounds.centerX * zoom;
+    const scaledCenterY = bounds.centerY * zoom;
+
+    // Translate so content center lands at usable area center
+    const tx = usableCenterX - scaledCenterX;
+    const ty = usableCenterY - scaledCenterY;
+
+    console.log(`[transform] container=${containerWidth}x${containerHeight} usableCenter=${usableCenterX.toFixed(0)},${usableCenterY.toFixed(0)} tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} zoom=${zoom.toFixed(3)}`);
+
+    return `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${zoom})`;
 }
