@@ -98,6 +98,10 @@ export const PlayerSeating: React.FC<PlayerSeatingProps> = ({
             // Check if this seat belongs to the current user
             const isCurrentUser = playerAtThisSeat && playerAtThisSeat.address?.toLowerCase() === userWalletAddress?.toLowerCase();
 
+            // Get the geometry engine's calculated dealer position for this UI slot.
+            // This replaces the hardcoded top/right offsets in Player/OppositePlayer/VacantPlayer.
+            const dealerPos = tableLayout.positions.dealers[positionIndex];
+
             // Build common props shared by all player components
             const playerProps = {
                 index: seatNumber,
@@ -106,7 +110,8 @@ export const PlayerSeating: React.FC<PlayerSeatingProps> = ({
                 top: position.top,
                 color: position.color || "#6b7280", // Default gray if no color
                 status: tableDataPlayers?.find((p: PlayerDTO) => p.seat === seatNumber)?.status,
-                onJoin: updateBalanceOnPlayerJoin
+                onJoin: updateBalanceOnPlayerJoin,
+                dealerPosition: dealerPos
             };
 
             // CASE 1: No player at this seat - render vacant position
@@ -118,6 +123,7 @@ export const PlayerSeating: React.FC<PlayerSeatingProps> = ({
                         left={tableLayout.positions.vacantPlayers[positionIndex]?.left || "0px"}
                         top={tableLayout.positions.vacantPlayers[positionIndex]?.top || "0px"}
                         onJoin={updateBalanceOnPlayerJoin}
+                        dealerPosition={dealerPos}
                     />
                 );
             }

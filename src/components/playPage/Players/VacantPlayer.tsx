@@ -32,7 +32,7 @@ import styles from "./VacantPlayer.module.css";
 import { USDCDepositModal } from "../../modals";
 
 const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo(
-    ({ left, top, index, onJoin, uiPosition }) => {
+    ({ left, top, index, onJoin, uiPosition, dealerPosition }) => {
         const { isUserAlreadyPlaying, canJoinSeat: checkCanJoinSeat } = useVacantSeatData();
         const { id: tableId } = useParams<{ id: string }>();
         const { gameOptions } = useGameOptions();
@@ -236,9 +236,13 @@ const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo
                         {seatText.subtitle && <div className="text-base sm:text-xs whitespace-nowrap">{seatText.subtitle}</div>}
                     </div>
 
-                    {/* Dealer Button - TODO: Implement framer motion animation in future iteration */}
-                    {isDealer && (
-                        <div className="absolute top-[-85px] right-[-40px] w-12 h-12 z-20">
+                    {/* Dealer Button — positioned by geometry engine (stageGeometry.ts DEALER_DISTANCE) */}
+                    {isDealer && dealerPosition && (
+                        <div className="absolute w-12 h-12 z-20"
+                             style={{
+                                 left: `${parseFloat(dealerPosition.left) - parseFloat(left || "0")}px`,
+                                 top: `${parseFloat(dealerPosition.top) - parseFloat(top || "0")}px`
+                             }}>
                             <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
                         </div>
                     )}

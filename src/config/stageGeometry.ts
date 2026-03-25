@@ -154,8 +154,10 @@ function stageToPosition(stageX: number, stageY: number, color?: string): Positi
 /** How far chips sit from seat toward table center (0 = at seat, 1 = at center) */
 const CHIP_DISTANCE = 0.4;
 
-/** How far dealer button sits from seat toward table center */
-const DEALER_DISTANCE = 0.3;
+/** How far dealer button sits from seat toward table center.
+ *  Increased from 0.3 → 0.45 so edge seats (especially seat 7/8) have
+ *  dealer buttons ON the table surface, not floating outside it. */
+const DEALER_DISTANCE = 0.4;
 
 /** How many pixels down the turn animation ring sits below the player */
 const TURN_ANIM_Y_OFFSET = 80;
@@ -388,7 +390,17 @@ export function getViewportMode(): ViewportMode {
     return "desktop";
 }
 
-/** Scaling parameters per viewport mode */
+/**
+ * Scaling parameters per viewport mode.
+ *
+ * maxScale:   Upper bound on zoom — prevents table being too large for the viewport.
+ * paddingH:   Horizontal px reserved (split left/right) before fitting the table.
+ * paddingV:   Vertical px reserved (accounts for header + footer) before fitting.
+ * translateY: Vertical shift as % of wrapper height (850px). -50% = true center.
+ *             Values closer to 0% push the table DOWN in its parent container.
+ *             Adjusted per mode because the parent div height differs from the
+ *             visible play area (header/footer steal space that the parent ignores).
+ */
 const VIEWPORT_PARAMS: Record<ViewportMode, {
     maxScale: number;
     paddingH: number;
@@ -396,33 +408,47 @@ const VIEWPORT_PARAMS: Record<ViewportMode, {
     translateY: string;
 }> = {
     "desktop": {
-        maxScale: 1.2,
+        maxScale: 2,
         paddingH: 200,
         paddingV: 300,
-        translateY: "-30%"
+        translateY: "-50%"      // true center — desktop has room to spare
     },
     "tablet": {
         maxScale: 0.8,
         paddingH: 100,
         paddingV: 200,
-        translateY: "-30%"
+        translateY: "-50%"      // true center — tablet has room to spare
     },
     "mobile-landscape": {
-        maxScale: 0.7,
-        paddingH: 50,
-        paddingV: 100,
-        translateY: "-50%"
+        maxScale: 0.38,         // was 0.7 — far too large for ~390px viewport height
+        paddingH: 40,           // was 50 — reclaimed 10px horizontal
+        paddingV: 120,          // was 100 — increased to reserve space for header (40px) + footer (80px)
+        translateY: "-35%"      // was "-50%" — parent is taller than visible area, so -50% pushes table above viewport. -35% compensates.
     },
     "mobile-portrait": {
-        maxScale: 0.5,
-        paddingH: 20,
-        paddingV: 150,
-        translateY: "-50%"
+        maxScale: 0.35,         // was 0.5 — too large for 390px viewport width
+        paddingH: 20,           // unchanged
+        paddingV: 300,          // was 150 — increased to reserve space for header (60px) + footer (200px) + breathing room
+        translateY: "-30%"      // was "-50%" — same parent-height issue as landscape, needs more downward push
     }
 };
 
 const MIN_SCALE = 0.3;
 const MAX_GLOBAL_SCALE = 2.0;
+
+/**
+ * Effective content dimensions including players that extend beyond the table surface.
+ * The original zoom calc used TABLE_WIDTH (900) / TABLE_HEIGHT (450) which only
+ * accounts for the green felt area. Players sit OUTSIDE the table, so on small
+ * screens they get clipped. These constants measure the full seat-to-seat span:
+ *
+ *   CONTENT_HEIGHT: seats y=238→832 (594px) + ~56px player UI = 650px
+ *   CONTENT_WIDTH:  seats x=296→1304 (1008px) + ~80px player UI each side = 1168px
+ *
+ * Used by calculateZoom() on mobile viewports only (desktop/tablet have enough room).
+ */
+const CONTENT_HEIGHT = 650;
+const CONTENT_WIDTH = 1168;
 
 /** Calculate zoom level for the current viewport */
 export function calculateZoom(): number {
@@ -432,23 +458,20 @@ export function calculateZoom(): number {
     const availableWidth = window.innerWidth - params.paddingH;
     const availableHeight = window.innerHeight - params.paddingV;
 
-    const scaleByWidth = availableWidth / TABLE_WIDTH;
-    const scaleByHeight = availableHeight / TABLE_HEIGHT;
+    // On mobile, scale to fit the full seat-to-seat content bounds (CONTENT_WIDTH/HEIGHT)
+    // instead of just the table surface (TABLE_WIDTH/HEIGHT). This prevents player
+    // components at edge seats from being clipped outside the viewport.
+    const isMobile = (mode === "mobile-landscape" || mode === "mobile-portrait");
+    const effectiveWidth = isMobile ? CONTENT_WIDTH : TABLE_WIDTH;
+    const effectiveHeight = isMobile ? CONTENT_HEIGHT : TABLE_HEIGHT;
+
+    const scaleByWidth = availableWidth / effectiveWidth;
+    const scaleByHeight = availableHeight / effectiveHeight;
     const fitScale = Math.min(scaleByWidth, scaleByHeight);
 
-    let finalScale: number;
-
-    if (mode === "desktop") {
-        if (window.innerWidth > 1920) {
-            finalScale = Math.min(fitScale, params.maxScale);
-        } else if (window.innerWidth > 1440) {
-            finalScale = Math.min(fitScale, 0.8);
-        } else {
-            finalScale = Math.max(Math.min(fitScale, 0.8), MIN_SCALE);
-        }
-    } else {
-        finalScale = Math.min(fitScale, params.maxScale);
-    }
+    // All viewports use the same logic: fit to available space, capped by maxScale.
+    // (Previously desktop had hardcoded 0.8 caps that ignored maxScale — removed.)
+    const finalScale = Math.min(fitScale, params.maxScale);
 
     return Math.max(MIN_SCALE, Math.min(finalScale, MAX_GLOBAL_SCALE));
 }

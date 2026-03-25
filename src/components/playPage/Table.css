@@ -305,28 +305,28 @@
 
 /* Performance optimized styles - moved from inline */
 
-/* Zoom wrapper positioning */
-.zoom-wrapper-mobile {
-    position: absolute;
-    left: 50%;
-    top: 47%;
-    transform-origin: center center;
-    width: 1600px;
-    height: 850px;
-    max-width: 100vw;
-    max-height: calc(100vh - 180px);
-    overflow: visible;
-}
-
+/**
+ * Zoom wrapper positioning.
+ *
+ * Previously .zoom-wrapper-mobile and .zoom-wrapper-desktop were separate classes
+ * with different top values (47% vs 40%), max-height constraints, and max-width.
+ * This caused CSS and JS to fight over positioning — now merged into one rule.
+ *
+ * CSS only sets the anchor point (top:50%, left:50%) and stage dimensions.
+ * ALL viewport-specific scaling, shifting, and centering is handled by
+ * stageGeometry.ts via the `transform` inline style (translateX + translateY + scale).
+ *
+ * Removed: max-width:100vw, max-height:calc(100vh-180px) — these fought the
+ * geometry engine's scale calculations and caused clipping on mobile.
+ */
+.zoom-wrapper-mobile,
 .zoom-wrapper-desktop {
     position: absolute;
     left: 50%;
-    top: 40%;
+    top: 50%;
     transform-origin: center center;
-    /* width: 1600px;
-    height: 850px; */
-    max-width: 100vw;
-    max-height: calc(100vh - 180px);
+    width: 1600px;
+    height: 850px;
     overflow: visible;
 }
 

@@ -18,7 +18,7 @@ import { useProfileAvatar } from "../../../context/profile/ProfileAvatarContext"
 import styles from "./PlayersCommon.module.css";
 
 const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
-    ({ left, top, index, currentIndex: _currentIndex, color, status: _status, uiPosition }) => {
+    ({ left, top, index, currentIndex: _currentIndex, color, status: _status, uiPosition, dealerPosition }) => {
         const { id } = useParams<{ id: string }>();
         const { playerData, stackValue, isFolded, isAllIn, isSeated, isSittingOut, isBusted, holeCards, round } = usePlayerData(index);
         const { winnerInfo } = useWinnerInfo();
@@ -243,9 +243,13 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
                         />
                     </div>
 
-                    {/* Dealer Button - TODO: Implement framer motion animation in future iteration */}
-                    {isDealer && (
-                        <div className="absolute top-[-85px] right-[-40px] w-12 h-12 z-20">
+                    {/* Dealer Button — positioned by geometry engine (stageGeometry.ts DEALER_DISTANCE) */}
+                    {isDealer && dealerPosition && (
+                        <div className="absolute w-12 h-12 z-20"
+                             style={{
+                                 left: `${parseFloat(dealerPosition.left) - parseFloat(left || "0")}px`,
+                                 top: `${parseFloat(dealerPosition.top) - parseFloat(top || "0")}px`
+                             }}>
                             <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
                         </div>
                     )}

@@ -243,6 +243,8 @@ export interface VacantPlayerProps {
     left: string;
     top: string;
     onJoin?: () => void;
+    /** Geometry-engine calculated dealer button position (from stageGeometry.ts DEALER_DISTANCE) */
+    dealerPosition?: { left: string; top: string };
 }
 
 export interface PlayerProps {
@@ -252,6 +254,8 @@ export interface PlayerProps {
     currentIndex: number;
     color?: string;
     status?: string;
+    /** Geometry-engine calculated dealer button position (from stageGeometry.ts DEALER_DISTANCE) */
+    dealerPosition?: { left: string; top: string };
 }
 
 export interface TurnAnimationProps {

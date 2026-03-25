@@ -35,9 +35,11 @@ type OppositePlayerProps = {
     status?: string;
     uiPosition?: number;
     cardBackStyle?: CardBackStyle;
+    /** Geometry-engine calculated dealer button position */
+    dealerPosition?: { left: string; top: string };
 };
 
-const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, index, color, uiPosition, cardBackStyle }) => {
+const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, index, color, uiPosition, cardBackStyle, dealerPosition }) => {
     const { playerData, stackValue, isFolded, isAllIn, isSeated, isSittingOut, isBusted, holeCards, round } = usePlayerData(index);
     const { winnerInfo } = useWinnerInfo();
     const { equities, shouldShow: shouldShowEquity } = useAllInEquity();
@@ -203,9 +205,13 @@ const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, i
                         />
                     </div>
 
-                    {/* Dealer Button - TODO: Implement framer motion animation in future iteration */}
-                    {isDealer && (
-                        <div className="absolute top-[-85px] right-[-40px] w-12 h-12 z-20">
+                    {/* Dealer Button — positioned by geometry engine (stageGeometry.ts DEALER_DISTANCE) */}
+                    {isDealer && dealerPosition && (
+                        <div className="absolute w-12 h-12 z-20"
+                             style={{
+                                 left: `${parseFloat(dealerPosition.left) - parseFloat(left || "0")}px`,
+                                 top: `${parseFloat(dealerPosition.top) - parseFloat(top || "0")}px`
+                             }}>
                             <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
                         </div>
                     )}
