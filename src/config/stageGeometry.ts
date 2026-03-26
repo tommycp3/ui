@@ -607,23 +607,15 @@ export function getTableTransform(
         // Simplest approach that works: use matrix math.
         // Put translate FIRST in CSS (applied last in screen space):
 
-        const cx = bounds.centerX;
-        const cy = bounds.centerY;
+        // Use the STAGE center (not padded bounds center) as the rotation pivot.
+        // The padded centerY has asymmetric top/bottom offsets that would cause
+        // a horizontal shift after 90deg rotation. Stage center is symmetric.
+        const cx = TABLE_CENTER_X;
+        const cy = TABLE_CENTER_Y;
 
-        // After rotate(90deg) around (0,0): point (cx, cy) → (cy, -cx)
-        // After scale(zoom): (cy*zoom, -cx*zoom)
-        // We want this at (usableCenterX, usableCenterY)
-        // translate is applied in screen space AFTER scale+rotate when written FIRST:
-        // CSS: translate(tx, ty) scale(zoom) rotate(90deg)
-        // Execution: rotate → scale → translate (in screen coords)
-        //
-        // NO — CSS transforms execute right-to-left but translate moves in the
-        // CURRENT (already-transformed) coordinate system.
-        //
-        // Let's just use a matrix. rotate(90deg) = [0, 1, -1, 0, 0, 0]
-        // scale(z) = [z, 0, 0, z, 0, 0]
-        // Combined: rotate then scale = [0, z, -z, 0, 0, 0]
-        // Point (cx, cy) maps to: (0*cx + -z*cy, z*cx + 0*cy) = (-z*cy, z*cx)
+        // Matrix math: rotate(90deg) then scale(z)
+        // matrix = [0, z, -z, 0, tx, ty]
+        // Point (cx, cy) maps to: (-z*cy, z*cx)
         // We want (-z*cy + tx, z*cx + ty) = (usableCenterX, usableCenterY)
         // tx = usableCenterX + z*cy
         // ty = usableCenterY - z*cx
