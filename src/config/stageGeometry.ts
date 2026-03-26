@@ -443,6 +443,7 @@ const VIEWPORT_PARAMS: Record<ViewportMode, {
     paddingH: number;
     paddingV: number;
     footerOverlay: number;
+    portraitOffsetX?: number;
 }> = {
     "desktop": {
         paddingH: 40,
@@ -462,7 +463,8 @@ const VIEWPORT_PARAMS: Record<ViewportMode, {
     "mobile-portrait": {
         paddingH: 20,
         paddingV: 10,
-        footerOverlay: 160      // footer is fixed overlay (160px) on portrait too
+        footerOverlay: 160,     // footer is fixed overlay (160px) on portrait too
+        portraitOffsetX: -50    // horizontal offset to visually center the rotated table
     }
 };
 
@@ -617,10 +619,11 @@ export function getTableTransform(
         // matrix = [0, z, -z, 0, tx, ty]
         // Point (cx, cy) maps to: (-z*cy, z*cx)
         // We want (-z*cy + tx, z*cx + ty) = (usableCenterX, usableCenterY)
-        // tx = usableCenterX + z*cy
+        // tx = usableCenterX + portraitOffsetX + z*cy
         // ty = usableCenterY - z*cx
 
-        const tx = usableCenterX + zoom * cy;
+        const offsetX = params.portraitOffsetX ?? 0;
+        const tx = usableCenterX + offsetX + zoom * cy;
         const ty = usableCenterY - zoom * cx;
 
         console.log(`[transform:portrait] center=(${cx},${cy}) usableCenter=${usableCenterX.toFixed(0)},${usableCenterY.toFixed(0)} tx=${tx.toFixed(1)} ty=${ty.toFixed(1)} zoom=${zoom.toFixed(3)}`);
