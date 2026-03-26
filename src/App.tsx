@@ -15,6 +15,7 @@ import AddressPage from "./pages/explorer/AddressPage";
 import AllAccountsPage from "./pages/explorer/AllAccountsPage";
 import DistributionPage from "./pages/explorer/DistributionPage";
 import HandReplayPage from "./pages/explorer/HandReplayPage";
+import HandPage from "./pages/explorer/HandPage";
 import TestSigningPage from "./pages/TestSigningPage";
 import ManualBridgeTrigger from "./pages/ManualBridgeTrigger";
 import BridgeAdminDashboard from "./pages/BridgeAdminDashboard";
@@ -32,6 +33,9 @@ import FaviconSetter from "./components/FaviconSetter";
 import { GlobalHeader } from "./components/GlobalHeader";
 import { ProfileAvatarProvider } from "./context/profile/ProfileAvatarContext";
 import { ProfileAvatarModal } from "./components/profile";
+import { PaymentApiProvider } from "./context/PaymentApiContext";
+import { CosmosApiProvider } from "./context/CosmosApiContext";
+import { IndexerApiProvider } from "./context/IndexerApiContext";
 
 const queryClient = new QueryClient();
 
@@ -76,7 +80,6 @@ function AppContent() {
                 <Route path="/wallet" element={<CosmosWalletPage />} />
                 {/* User-facing routes */}
                 <Route path="/bridge/withdrawals" element={<WithdrawalDashboard />} />
-
                 {/* Admin routes - consolidated under /admin */}
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/genesis" element={<GenesisState />} />
@@ -84,7 +87,6 @@ function AppContent() {
                 <Route path="/admin/bridge-manual" element={<ManualBridgeTrigger />} />
                 <Route path="/admin/tables" element={<TableAdminPage />} />
                 <Route path="/admin/test-signing" element={<TestSigningPage />} />
-
                 {/* Legacy routes - redirect to new admin paths */}
                 <Route path="/test-signing" element={<TestSigningPage />} />
                 <Route path="/bridge/manual" element={<ManualBridgeTrigger />} />
@@ -98,7 +100,7 @@ function AppContent() {
                 <Route path="/explorer/accounts" element={<AllAccountsPage />} />
                 <Route path="/explorer/distribution" element={<DistributionPage />} />
                 <Route path="/explorer/hand/:gameId/:handNumber" element={<HandReplayPage />} />
-                <Route path="/explorer/hand/:gameId" element={<HandReplayPage />} />
+                <Route path="/explorer/hand/:gameId" element={<HandPage />} />
                 <Route path="/nodes" element={<NodesPage />} />
                 <Route path="/node/:name" element={<NodeStatusPage />} />
                 <Route path="/" element={<Dashboard />} />
@@ -128,7 +130,13 @@ function App() {
                 <WagmiProvider config={wagmiAdapter.wagmiConfig}>
                     <GameStateProvider>
                         <ProfileAvatarProvider>
-                            <AppContent />
+                            <PaymentApiProvider>
+                                <CosmosApiProvider>
+                                    <IndexerApiProvider>
+                                        <AppContent />
+                                    </IndexerApiProvider>
+                                </CosmosApiProvider>
+                            </PaymentApiProvider>
                         </ProfileAvatarProvider>
                     </GameStateProvider>
                 </WagmiProvider>
