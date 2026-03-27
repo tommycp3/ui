@@ -43,7 +43,7 @@
  * - ActionsLog: Game history
  */
 
-import { useEffect, useState, useMemo, useCallback, memo } from "react";
+import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { isSitAndGoFormat, isTournamentFormat } from "../../utils/gameFormatUtils";
 import { formatPotDisplay, formatChipCount } from "../../utils/potDisplayUtils";
 // Position arrays now come from useTableLayout hook
@@ -81,7 +81,6 @@ import { usePlayerSeatInfo } from "../../hooks/player/usePlayerSeatInfo"; // Pro
 import { useNextToActInfo } from "../../hooks/game/useNextToActInfo";
 
 //2. Visual Position/State Providers
-import { useChipPositions } from "../../hooks/animations/useChipPositions";
 import { usePlayerChipData } from "../../hooks/player/usePlayerChipData";
 
 //3. Game State Providers
@@ -112,7 +111,9 @@ import { useGameStartCountdown } from "../../hooks/game/useGameStartCountdown";
 // Table Layout Configuration
 import { useTableLayout } from "../../hooks/game/useTableLayout";
 import { useVacantSeatData } from "../../hooks/game/useVacantSeatData";
-import { getViewportMode } from "../../config/tableLayoutConfig";
+import { getViewportMode, COMPONENT_SCALE, type PositionArrays } from "../../config/stageGeometry";
+import CustomDealer from "../../assets/CustomDealer.svg";
+import { useDealerPosition } from "../../hooks/game/useDealerPosition";
 
 // Turn Notification
 import { useTurnNotification } from "../../hooks/notifications/useTurnNotification";
@@ -142,6 +143,188 @@ const NetworkDisplay = memo(({ isMainnet = false }: NetworkDisplayProps) => {
 });
 
 NetworkDisplay.displayName = "NetworkDisplay";
+
+// Global debug state — shared between LayoutDebugOverlay and Table component
+// Press D = draggable overlay, C = chip markers, B = dealer markers, S = seat markers
+let _debugChips = false;
+let _debugDealers = false;
+let _debugSeats = false;
+const debugListeners: Set<() => void> = new Set();
+function useDebugToggle() {
+    const [, forceUpdate] = useState(0);
+    useEffect(() => {
+        const cb = () => forceUpdate(n => n + 1);
+        debugListeners.add(cb);
+        return () => { debugListeners.delete(cb); };
+    }, []);
+    return { showChips: _debugChips, showDealers: _debugDealers, showSeats: _debugSeats };
+}
+
+/** DEBUG OVERLAY: Press 'D' to toggle. Shows draggable marker with coordinates.
+ *  Press C = chip markers, B = dealer markers, S = seat markers.
+ *  REMOVE after positioning is done. */
+const LayoutDebugOverlay = () => {
+    const [visible, setVisible] = useState(false);
+    const [pos, setPos] = useState({ x: 200, y: 200 });
+    const [dragging, setDragging] = useState(false);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [, setVpMode] = useState("");
+
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === "d" || e.key === "D") setVisible(v => !v);
+            if (e.key === "c" || e.key === "C") { _debugChips = !_debugChips; debugListeners.forEach(cb => cb()); }
+            if (e.key === "b" || e.key === "B") { _debugDealers = !_debugDealers; debugListeners.forEach(cb => cb()); }
+            if (e.key === "s" || e.key === "S") { _debugSeats = !_debugSeats; debugListeners.forEach(cb => cb()); }
+        };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, []);
+
+    useEffect(() => {
+        if (!visible) return;
+        const handleMove = (e: MouseEvent) => {
+            setMousePos({ x: e.clientX, y: e.clientY });
+            if (dragging) setPos({ x: e.clientX, y: e.clientY });
+        };
+        const handleUp = () => setDragging(false);
+        window.addEventListener("mousemove", handleMove);
+        window.addEventListener("mouseup", handleUp);
+        setVpMode(`${window.innerWidth}x${window.innerHeight}`);
+        return () => {
+            window.removeEventListener("mousemove", handleMove);
+            window.removeEventListener("mouseup", handleUp);
+        };
+    }, [visible, dragging]);
+
+    if (!visible) return null;
+
+    const _s = (_key: string, _val: string | number) => (
+        <span style={{ color: "#fbbf24" }}>{_key}:</span>
+    );
+
+    return (
+        <div style={{ position: "fixed", inset: 0, zIndex: 999999, pointerEvents: "none" }}>
+            {/* Crosshair lines */}
+            <div style={{ position: "absolute", left: pos.x, top: 0, width: 1, height: "100%", backgroundColor: "rgba(255,0,0,0.4)" }} />
+            <div style={{ position: "absolute", top: pos.y, left: 0, height: 1, width: "100%", backgroundColor: "rgba(255,0,0,0.4)" }} />
+
+            {/* Draggable marker */}
+            <div
+                onMouseDown={(e) => { e.preventDefault(); setDragging(true); }}
+                style={{
+                    position: "absolute",
+                    left: pos.x - 15,
+                    top: pos.y - 15,
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    backgroundColor: "rgba(255, 0, 0, 0.8)",
+                    border: "2px solid white",
+                    cursor: "grab",
+                    pointerEvents: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                }}
+            >
+                <span style={{ color: "white", fontSize: 10, fontWeight: "bold" }}>+</span>
+            </div>
+
+            {/* Info panel */}
+            <div style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                backgroundColor: "rgba(0,0,0,0.85)",
+                color: "white",
+                padding: "8px 12px",
+                borderRadius: 8,
+                fontFamily: "monospace",
+                fontSize: 12,
+                lineHeight: 1.6,
+                pointerEvents: "auto",
+                minWidth: 220
+            }}>
+                <div style={{ color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>DEBUG (D=drag C=chips B=dealer S=seats)</div>
+                <div>Viewport: {window.innerWidth}x{window.innerHeight}</div>
+                <div>Mouse: {mousePos.x}, {mousePos.y}</div>
+                <div style={{ color: "#4ade80" }}>Marker: {pos.x}, {pos.y}</div>
+                <div>From bottom: {window.innerHeight - pos.y}px</div>
+                <div>From right: {window.innerWidth - pos.x}px</div>
+                <div style={{ marginTop: 4, borderTop: "1px solid #444", paddingTop: 4 }}>
+                    <span style={{ color: _debugChips ? "#4ade80" : "#666" }}>C:chips{_debugChips ? " ON" : ""} </span>
+                    <span style={{ color: _debugDealers ? "#fbbf24" : "#666" }}>B:dealer{_debugDealers ? " ON" : ""} </span>
+                    <span style={{ color: _debugSeats ? "#60a5fa" : "#666" }}>S:seats{_debugSeats ? " ON" : ""}</span>
+                </div>
+                <div style={{ marginTop: 4, color: "#93c5fd", fontSize: 10 }}>Drag the red dot to mark positions</div>
+            </div>
+        </div>
+    );
+};
+
+/** DEBUG: Renders colored markers at chip/dealer/seat positions inside the table div.
+ *  Toggle with C (chips), B (dealers), S (seats). REMOVE after positioning is done. */
+const PositionDebugMarkers: React.FC<{ positions: PositionArrays }> = ({ positions }) => {
+    const debug = useDebugToggle();
+
+    const markerStyle = (left: string, top: string, color: string, label: string, useBottom = false) => (
+        <div
+            key={`${label}-${left}-${top}`}
+            style={{
+                position: "absolute",
+                left: left,
+                ...(useBottom ? { bottom: top } : { top: top }),
+                transform: "translate(-50%, -50%)",
+                zIndex: 99999,
+                pointerEvents: "none"
+            }}
+        >
+            <div style={{
+                width: 24,
+                height: 24,
+                borderRadius: "50%",
+                backgroundColor: color,
+                border: "2px solid white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 0 8px rgba(0,0,0,0.5)"
+            }}>
+                <span style={{ color: "white", fontSize: 8, fontWeight: "bold" }}>{label}</span>
+            </div>
+            <div style={{
+                position: "absolute",
+                top: 26,
+                left: "50%",
+                transform: "translateX(-50%)",
+                backgroundColor: "rgba(0,0,0,0.8)",
+                color: "white",
+                fontSize: 8,
+                padding: "1px 4px",
+                borderRadius: 3,
+                whiteSpace: "nowrap",
+                fontFamily: "monospace"
+            }}>
+                {left},{top}
+            </div>
+        </div>
+    );
+
+    return (
+        <>
+            {debug.showChips && positions.chips.map((chip, i) =>
+                markerStyle(chip.left, chip.bottom, "#4ade80", `C${i + 1}`, true)
+            )}
+            {debug.showDealers && positions.dealers.map((d, i) =>
+                markerStyle(d.left, d.top, "#fbbf24", `D${i + 1}`)
+            )}
+            {debug.showSeats && positions.players.map((p, i) =>
+                markerStyle(p.left, p.top, "#60a5fa", `S${i + 1}`)
+            )}
+        </>
+    );
+};
 
 
 const Table = React.memo(() => {
@@ -271,10 +454,12 @@ const Table = React.memo(() => {
 
     // Add the useTableState hook to get table state properties
     const { tableSize } = useTableState();
+    const { dealerSeat } = useDealerPosition();
 
-    // Use the table layout configuration system (only 4 and 9 players supported)
-    // TODO: Add support for 2, 3, 5, 6, 7, 8 player tables - positions need to be configured in tableLayoutConfig.ts
-    const tableLayout = useTableLayout((tableSize as 4 | 9) || 9);
+    // Ref to the table container div — geometry engine measures this for auto-fit
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    const tableLayout = useTableLayout((tableSize as 2 | 4 | 6 | 9) || 9, tableContainerRef);
 
     // Add the useGameProgress hook
     const { isGameInProgress, handNumber, actionCount, nextToAct } = useGameProgress(id);
@@ -372,9 +557,6 @@ const Table = React.memo(() => {
     const [startIndex, setStartIndex] = useState<number>(0); // Controls table rotation (0 = no rotation)
 
     const [currentIndex, setCurrentIndex] = useState<number>(1);
-
-    // Add the useChipPositions hook AFTER startIndex is defined
-    const { chipPositionArray: _chipPositionArray } = useChipPositions(startIndex);
 
     // Add the usePlayerChipData hook
     const { getChipAmount } = usePlayerChipData();
@@ -630,6 +812,10 @@ const Table = React.memo(() => {
 
     return (
         <div className="table-container">
+            {/* DEBUG OVERLAY: Press 'D' to toggle. Draggable marker shows coordinates.
+                Remove after positioning is finalized. */}
+            <LayoutDebugOverlay />
+
             {/* Temporary Color Debug Component */}
             {/* <ColorDebug /> */}
 
@@ -703,7 +889,7 @@ const Table = React.memo(() => {
                     {/* Static base gradient - mouse tracking removed for performance */}
                     <div className="background-base-static" />
                     {/*//! TABLE */}
-                    <div className="flex-grow flex flex-col align-center justify-center min-h-[calc(100vh-150px)] sm:min-h-[calc(100vh-350px)] z-[0] relative">
+                    <div ref={tableContainerRef} className="flex-grow flex flex-col align-center justify-center z-[0] relative">
                         {/* Hexagon pattern overlay */}
 
                         <div
@@ -713,10 +899,10 @@ const Table = React.memo(() => {
                             }}
                         >
                             <div className="flex-grow scrollbar-none bg-custom-table h-full flex flex-col justify-center items-center relative">
-                                <div className="w-[900px] h-[450px] relative text-center block transform translate-y-[30px]">
+                                <div className="w-[900px] h-[450px] relative text-center block">
                                     <div className="h-full flex align-center justify-center">
                                         <div
-                                            className="table-surface-shadow z-20 relative flex flex-col w-[900px] h-[350px] left-1/2 top-0 transform -translate-x-1/2 text-center border-[3px] border-rgba(255, 255, 255, 0.2) border-solid rounded-full items-center justify-center"
+                                            className="table-surface-shadow z-20 relative flex flex-col w-[900px] h-[450px] left-1/2 top-0 transform -translate-x-1/2 text-center border-[3px] border-rgba(255, 255, 255, 0.2) border-solid rounded-[225px] items-center justify-center"
                                         >
                                             {/* //! Table */}
                                             <TableBoard
@@ -727,30 +913,57 @@ const Table = React.memo(() => {
                                                 cardBackStyle={cardBackStyle}
                                             />
 
-                                            {/*//! CHIP - Hide when sit-and-go is waiting for players */}
-                                            {!isSitAndGoWaitingForPlayers && tableLayout.positions.chips.map((position, index) => {
-                                                const chipAmount = getChipAmount(index + 1);
-
-                                                // DON'T RENDER CHIP IF AMOUNT IS 0
-                                                if (chipAmount === "0" || chipAmount === "" || !chipAmount) {
-                                                    return null;
-                                                }
-
-                                                return (
-                                                    <div
-                                                        key={`key-${index}`}
-                                                        className="chip-position"
-                                                        style={{
-                                                            left: position.left,
-                                                            bottom: position.bottom
-                                                        }}
-                                                    >
-                                                        <Chip amount={chipAmount} />
-                                                    </div>
-                                                );
-                                            })}
+                                            {/* Chips moved outside this transformed div — see below dealer button */}
                                         </div>
                                     </div>
+                                    {/* Dealer Button — rendered at table level using geometry positions directly.
+                                        Same pattern as chips: absolute position from geometry engine.
+                                        dealerSeat is 1-based seat number from game state. */}
+                                    {(() => {
+                                        const dIdx = dealerSeat != null && dealerSeat > 0 ? dealerSeat - 1 : -1;
+                                        const dPos = dIdx >= 0 ? tableLayout.positions.dealers[dIdx] : null;
+                                        if (dIdx === -1) console.log(`[dealer] no dealer seat (dealerSeat=${dealerSeat})`);
+                                        else console.log(`[dealer] seat=${dealerSeat} idx=${dIdx} pos=${dPos?.left},${dPos?.top}`);
+                                        if (!dPos) return null;
+                                        return (
+                                            <div
+                                                className="absolute w-12 h-12 z-[25]"
+                                                style={{
+                                                    left: dPos.left,
+                                                    top: dPos.top,
+                                                    transform: "translate(-50%, -50%)"
+                                                }}
+                                            >
+                                                <img src={CustomDealer} alt="Dealer Button" className="w-full h-full"
+                                                     style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }} />
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/*//! CHIPS — rendered at table level using geometry positions.
+                                        Moved out of the transformed oval div so coordinates are correct. */}
+                                    {!isSitAndGoWaitingForPlayers && tableLayout.positions.chips.map((position, index) => {
+                                        const chipAmount = getChipAmount(index + 1);
+                                        // DEBUG: log all chip amounts to verify data
+                                        if (index === 0) console.log(`[chips] seat amounts:`, Array.from({length: 9}, (_, i) => `S${i+1}=${getChipAmount(i+1) || "0"}`).join(" "));
+                                        if (chipAmount === "0" || chipAmount === "" || !chipAmount) return null;
+                                        return (
+                                            <div
+                                                key={`chip-${index}`}
+                                                className="absolute z-[25]"
+                                                style={{
+                                                    left: position.left,
+                                                    bottom: position.bottom,
+                                                    transform: "translate(-50%, 50%)"
+                                                }}
+                                            >
+                                                <div style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }}>
+                                                    <Chip amount={chipAmount} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
                                     <PlayerSeating
                                         tableLayout={tableLayout}
                                         tableSize={tableSize}
@@ -765,6 +978,9 @@ const Table = React.memo(() => {
                                         cardBackStyle={cardBackStyle}
                                         updateBalanceOnPlayerJoin={updateBalanceOnPlayerJoin}
                                     />
+
+                                    {/* DEBUG: Position markers (C=chips, B=dealers, S=seats) */}
+                                    <PositionDebugMarkers positions={tableLayout.positions} />
                                 </div>
                             </div>
                         </div>
@@ -775,25 +991,22 @@ const Table = React.memo(() => {
                     </div>
                     {/* Live Hand Strength Display */}
                     <LiveHandStrengthDisplay />
-
-                    {/*//! FOOTER - Adjusted for mobile landscape */}
-                    <div
-                        className={`w-full flex justify-center items-center z-[10] ${
-                            isMobileLandscape
-                                ? "h-[80px] fixed bottom-0 left-0 right-0 bg-black bg-opacity-50 backdrop-blur-sm"
-                                : "h-[200px] sm:h-[250px] bg-transparent"
-                        }`}
-                    >
-                        <div className={`w-full flex justify-center items-center h-full ${isMobileLandscape ? "max-w-[500px] px-2" : "max-w-[700px]"}`}>
-                            <PokerActionPanel onTransactionSubmitted={handleTransactionSubmitted} />
-                        </div>
-                        {/* <div className="w-full h-[400px] flex justify-center overflow-y-auto">
-                            <Footer2 tableId={id} />
-                        </div> */}
-                    </div>
                 </div>
                 {/*//! ACTION LOG OVERLAY */}
                 <TableSidebar isOpen={openSidebar} />
+            </div>
+
+            {/*//! FOOTER - Fixed overlay on ALL viewports. OUTSIDE the body-container
+                so no ancestor transform/transition breaks position:fixed.
+                The geometry engine accounts for this via footerOverlay in VIEWPORT_PARAMS. */}
+            <div
+                className={`w-full flex justify-center items-center z-[50] fixed bottom-0 left-0 right-0 bg-black bg-opacity-50 backdrop-blur-sm ${
+                    isMobileLandscape ? "h-[80px]" : "h-[160px]"
+                }`}
+            >
+                <div className={`w-full flex justify-center items-center h-full ${isMobileLandscape ? "max-w-[500px] px-2" : "max-w-[700px]"}`}>
+                    <PokerActionPanel onTransactionSubmitted={handleTransactionSubmitted} />
+                </div>
             </div>
 
             {/* Status Messages */}

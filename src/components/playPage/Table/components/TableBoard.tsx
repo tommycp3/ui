@@ -9,6 +9,7 @@
  */
 
 import React, { useMemo } from "react";
+import { getViewportMode, COMPONENT_SCALE } from "../../../../config/stageGeometry";
 import { getCardImageUrl, getCardBackUrl, CardBackStyle } from "../../../../utils/cardImages";
 import { PotDisplayValues } from "../../../../utils/potDisplayUtils";
 import OppositePlayerCards from "../../Card/OppositePlayerCards";
@@ -51,15 +52,20 @@ export const TableBoard: React.FC<TableBoardProps> = ({
         });
     }, [communityCards, cardBackStyle]);
 
+    const isPortrait = getViewportMode() === "mobile-portrait";
+    const counterRotate: React.CSSProperties = {
+        transform: [isPortrait ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ")
+    };
+
     return (
         <>
             {/* Club Logo */}
-            <div className="table-logo">
+            <div className="table-logo" style={counterRotate}>
                 <img src={clubLogo} alt="Club Logo" />
             </div>
 
             {/* Central Display Area */}
-            <div className="flex flex-col items-center justify-center -mt-20">
+            <div className="flex flex-col items-center justify-center -mt-20" style={counterRotate}>
                 {/* Hide pot display when sit-and-go is waiting for players */}
                 {!isSitAndGoWaitingForPlayers && (
                     <>

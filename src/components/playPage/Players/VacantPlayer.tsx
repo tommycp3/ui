@@ -20,11 +20,10 @@ import PokerProfile from "../../../assets/PokerProfile.svg";
 
 import { useVacantSeatData } from "../../../hooks/game/useVacantSeatData";
 import type { VacantPlayerProps } from "../../../types/index";
-import { useDealerPosition } from "../../../hooks/game/useDealerPosition";
 import { joinTable } from "../../../hooks/playerActions/joinTable";
 import { useGameOptions } from "../../../hooks/game/useGameOptions";
-import CustomDealer from "../../../assets/CustomDealer.svg";
 import { formatDollars, formatUSDCToSimpleDollars, parseDollars } from "../../../utils/numberUtils";
+import { getViewportMode, COMPONENT_SCALE } from "../../../config/stageGeometry";
 import { useCosmosWallet } from "../../../hooks";
 import { microToUsdc } from "../../../constants/currency";
 import { useNetwork } from "../../../context/NetworkContext";
@@ -46,12 +45,8 @@ const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo
         const [, setJoinResponse] = useState<any>(null);
         const [buyInAmount, setBuyInAmount] = useState<string>("");
         const [buyInAmountDisplay, setBuyInAmountDisplay] = useState<string>("");
-        const { dealerSeat } = useDealerPosition();
         // USDC Deposit Modal
         const [showUSDCDepositModal, setShowUSDCDepositModal] = useState(false);
-
-        // Check if this seat is the dealer
-        const isDealer = dealerSeat === index;
 
         // Memoize seat status checks
         const canJoinThisSeat = useMemo(() => checkCanJoinSeat(index), [checkCanJoinSeat, index]);
@@ -218,6 +213,7 @@ const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo
         return (
             <>
                 <div className="absolute cursor-pointer" style={containerStyle} onClick={handleSeatClick}>
+                    <div style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }}>
                     {/* Development Mode Debug Info */}
                     {import.meta.env.VITE_NODE_ENV === "development" && (
                         <div className="absolute top-[-50px] left-1/2 transform -translate-x-1/2 bg-gray-600 bg-opacity-80 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap z-50 border border-gray-400">
@@ -236,12 +232,8 @@ const VacantPlayer: React.FC<VacantPlayerProps & { uiPosition?: number }> = memo
                         {seatText.subtitle && <div className="text-base sm:text-xs whitespace-nowrap">{seatText.subtitle}</div>}
                     </div>
 
-                    {/* Dealer Button - TODO: Implement framer motion animation in future iteration */}
-                    {isDealer && (
-                        <div className="absolute top-[-85px] right-[-40px] w-12 h-12 z-20">
-                            <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
-                        </div>
-                    )}
+                    {/* Dealer Button — now rendered at table level */}
+                    </div>
                 </div>
 
                 {/* Buy-in modal - using portal to render at document body */}

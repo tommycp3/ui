@@ -17,13 +17,12 @@ import Badge from "../common/Badge";
 import { useWinnerInfo } from "../../../hooks/game/useWinnerInfo";
 import { usePlayerData } from "../../../hooks/player/usePlayerData";
 import { useShowingCardsByAddress } from "../../../hooks/player/useShowingCardsByAddress";
-import { useDealerPosition } from "../../../hooks/game/useDealerPosition";
-import CustomDealer from "../../../assets/CustomDealer.svg";
 import { useSitAndGoPlayerResults } from "../../../hooks/game/useSitAndGoPlayerResults";
 import { getCardImageUrl, getCardBackUrl, CardBackStyle } from "../../../utils/cardImages";
 import { useAllInEquity } from "../../../hooks/player/useAllInEquity";
 import { useProfileAvatar } from "../../../context/profile/ProfileAvatarContext";
 import { usePlayerTimer } from "../../../hooks/player/usePlayerTimer";
+import { getViewportMode, COMPONENT_SCALE } from "../../../config/stageGeometry";
 import styles from "./PlayersCommon.module.css";
 
 type OppositePlayerProps = {
@@ -52,10 +51,6 @@ const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, i
         return equities.get(index) ?? null;
     }, [shouldShowEquity, equities, index]);
     const { showingPlayers } = useShowingCardsByAddress();
-    const { dealerSeat } = useDealerPosition();
-
-    // Check if this seat is the dealer
-    const isDealer = dealerSeat === index;
 
     // Get tournament results for this seat
     const { getSeatResult, isSitAndGo } = useSitAndGoPlayerResults();
@@ -118,6 +113,7 @@ const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, i
                     top: top
                 }}
             >
+                <div style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }}>
                 {/* Development Mode Debug Info */}
                 {import.meta.env.VITE_NODE_ENV === "development" && (
                     <div className="absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-blue-600 bg-opacity-80 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap z-50 border border-blue-400">
@@ -183,12 +179,8 @@ const OppositePlayer: React.FC<OppositePlayerProps> = React.memo(({ left, top, i
                         />
                     </div>
 
-                    {/* Dealer Button */}
-                    {isDealer && (
-                        <div className="absolute top-[-85px] right-[-40px] w-12 h-12 z-20">
-                            <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
-                        </div>
-                    )}
+                    {/* Dealer Button — now rendered at table level */}
+                </div>
                 </div>
             </div>
         </>

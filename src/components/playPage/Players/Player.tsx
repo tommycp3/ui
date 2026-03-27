@@ -7,12 +7,11 @@ import { usePlayerTimer } from "../../../hooks/player/usePlayerTimer";
 import { useParams } from "react-router-dom";
 import type { PlayerProps } from "../../../types/index";
 import { useGameStateContext } from "../../../context/GameStateContext";
-import { useDealerPosition } from "../../../hooks/game/useDealerPosition";
-import CustomDealer from "../../../assets/CustomDealer.svg";
 import { getCardImageUrl } from "../../../utils/cardImages";
 import { useSitAndGoPlayerResults } from "../../../hooks/game/useSitAndGoPlayerResults";
 import { useAllInEquity } from "../../../hooks/player/useAllInEquity";
 import { useProfileAvatar } from "../../../context/profile/ProfileAvatarContext";
+import { getViewportMode, COMPONENT_SCALE } from "../../../config/stageGeometry";
 import styles from "./PlayersCommon.module.css";
 
 const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
@@ -22,12 +21,8 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
         const { winnerInfo } = useWinnerInfo();
         const { extendTime, canExtend, isCurrentUserTurn, isActive: isTurnTimerActive } = usePlayerTimer(id, index);
 
-        const { dealerSeat } = useDealerPosition();
         const { equities, shouldShow: shouldShowEquity } = useAllInEquity();
         const { getAvatarForAddress } = useProfileAvatar();
-
-        // Check if this seat is the dealer
-        const isDealer = dealerSeat === index;
 
         // Get equity for this player if available
         const playerEquity = useMemo((): number | null => {
@@ -141,6 +136,7 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
                 className={`${opacityClass} absolute flex flex-col justify-center w-[160px] h-[140px] mt-[40px] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer ${styles.secondaryText} ${styles.positionTransition}`}
                 style={containerStyle}
             >
+                <div style={{ transform: [getViewportMode() === "mobile-portrait" ? "rotate(-90deg)" : "", `scale(${COMPONENT_SCALE})`].filter(Boolean).join(" ") }}>
                 {/* Development Mode Debug Info */}
                 {import.meta.env.VITE_NODE_ENV === "development" && (
                     <div className="absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap z-50 border border-green-400">
@@ -192,12 +188,8 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
                         />
                     </div>
 
-                    {/* Dealer Button */}
-                    {isDealer && (
-                        <div className="absolute top-[-85px] right-[-40px] w-12 h-12 z-20">
-                            <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
-                        </div>
-                    )}
+                    {/* Dealer Button — now rendered at table level */}
+                </div>
                 </div>
             </div>
         );

@@ -94,10 +94,15 @@
 }
 
 /* New classes for extracted inline styles */
+/* table-container: flex column so children (header, body, footer) share the 100vh.
+   overflow: hidden prevents page scrollbars from the 1600x850 zoom wrapper extending
+   beyond viewport. The footer is inside this container and properly sized by flex. */
 .table-container {
     position: relative;
     height: 100vh;
     width: 100%;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
@@ -157,17 +162,8 @@
     transition: all 0.3s ease-out;
 }
 
-.zoom-wrapper {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform-origin: center center;
-    width: 1600px;
-    height: 850px;
-    max-width: 100vw;
-    max-height: calc(100vh - 180px);
-    overflow: visible;
-}
+/* .zoom-wrapper removed — was stale leftover with top:50%, left:50%, max-height
+   that conflicted with the pure functional positioning in .zoom-wrapper-mobile/desktop */
 
 .table-logo {
     position: absolute;
@@ -305,28 +301,23 @@
 
 /* Performance optimized styles - moved from inline */
 
-/* Zoom wrapper positioning */
-.zoom-wrapper-mobile {
-    position: absolute;
-    left: 50%;
-    top: 47%;
-    transform-origin: center center;
-    width: 1600px;
-    height: 850px;
-    max-width: 100vw;
-    max-height: calc(100vh - 180px);
-    overflow: visible;
-}
-
+/**
+ * Zoom wrapper — CSS does NOTHING for positioning.
+ *
+ * All positioning is calculated in stageGeometry.ts via pixel-based
+ * translate(Xpx, Ypx) scale(zoom). CSS just sets the stage dimensions
+ * and anchors at top-left with transform-origin: 0 0.
+ *
+ * NO top:50%, NO left:50%, NO max-width, NO max-height.
+ */
+.zoom-wrapper-mobile,
 .zoom-wrapper-desktop {
     position: absolute;
-    left: 50%;
-    top: 40%;
-    transform-origin: center center;
-    /* width: 1600px;
-    height: 850px; */
-    max-width: 100vw;
-    max-height: calc(100vh - 180px);
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    width: 1600px;
+    height: 850px;
     overflow: visible;
 }
 
