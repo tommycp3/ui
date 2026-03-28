@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import useCosmosWallet from "../hooks/wallet/useCosmosWallet";
 import { useNetwork } from "../context/NetworkContext";
 import { toast } from "react-toastify";
@@ -14,11 +14,12 @@ import { COSMOS_BRIDGE_ADDRESS } from "../config/constants";
 /**
  * WithdrawalDashboard - Interface for managing USDC withdrawals to Ethereum
  *
- * Features:
- * - Initiate new withdrawals from Block52 to Ethereum
- * - View withdrawal status (pending/signed/completed)
- * - Complete signed withdrawals on Ethereum
- * - 2-step withdrawal flow with automatic validator signing
+ * 2-step withdrawal flow:
+ *   Step 1: User sends withdrawal request to Block52 (signed by cosmos key, eth address in message).
+ *           The validator then signs the withdrawal payload for the deposit contract.
+ *   Step 2: User calls the deposit contract withdraw() on Ethereum via MetaMask.
+ *
+ * This dashboard auto-polls for pending withdrawals so users see status updates in real time.
  */
 
 interface Withdrawal {
@@ -231,6 +232,35 @@ export default function WithdrawalDashboard() {
         loadWithdrawals();
     }, [loadWithdrawals]);
 
+    // Auto-poll for pending withdrawals every 5 seconds
+    const autoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    useEffect(() => {
+        const hasPending = withdrawals.some(w => w.status === "pending");
+
+        if (hasPending && cosmosWallet.address) {
+            // Start auto-polling
+            if (!autoPollRef.current) {
+                autoPollRef.current = setInterval(() => {
+                    loadWithdrawals();
+                }, 5000);
+            }
+        } else {
+            // No pending withdrawals - stop polling
+            if (autoPollRef.current) {
+                clearInterval(autoPollRef.current);
+                autoPollRef.current = null;
+            }
+        }
+
+        return () => {
+            if (autoPollRef.current) {
+                clearInterval(autoPollRef.current);
+                autoPollRef.current = null;
+            }
+        };
+    }, [withdrawals, cosmosWallet.address, loadWithdrawals]);
+
     // Filter withdrawals based on selected filter
     const filteredWithdrawals = withdrawals.filter(withdrawal => {
         if (filter === "all") return true;
@@ -363,12 +393,14 @@ export default function WithdrawalDashboard() {
                                     filteredWithdrawals.map(withdrawal => (
                                         <tr key={withdrawal.nonce} className="hover:bg-gray-700/50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-white font-mono text-sm">#{withdrawal.nonce}</span>
+                                                <span className="text-white font-mono text-sm" title={withdrawal.nonce}>
+                                                    #{withdrawal.nonce.slice(0, 10)}...{withdrawal.nonce.slice(-4)}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-white font-mono text-xs" title={withdrawal.baseAddress}>
-                                                        {withdrawal.baseAddress.slice(0, 10)}...{withdrawal.baseAddress.slice(-8)}
+                                                    <span className="text-white font-mono text-sm">
+                                                        {withdrawal.baseAddress}
                                                     </span>
                                                     <button
                                                         onClick={() => {
@@ -393,26 +425,17 @@ export default function WithdrawalDashboard() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center">
                                                 {withdrawal.status === "pending" && (
-                                                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-900/50 text-yellow-300 border border-yellow-700">
-                                                        ⏳ Awaiting Signature
-                                                    </span>
+                                                    <span className="text-sm text-yellow-400">Pending</span>
                                                 )}
                                                 {withdrawal.status === "signed" && (
-                                                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900/50 text-blue-300 border border-blue-700">
-                                                        ✍️ Signed (Ready)
-                                                    </span>
+                                                    <span className="text-sm text-blue-400">Signed</span>
                                                 )}
                                                 {withdrawal.status === "completed" && (
-                                                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-900/50 text-green-300 border border-green-700">
-                                                        ✅ Completed
-                                                    </span>
+                                                    <span className="text-sm text-green-400">Completed</span>
                                                 )}
                                                 {withdrawal.status === "error" && (
-                                                    <span
-                                                        className="px-3 py-1 text-xs font-semibold rounded-full bg-red-900/50 text-red-300 border border-red-700 cursor-help"
-                                                        title={withdrawal.errorMessage}
-                                                    >
-                                                        ❌ Error
+                                                    <span className="text-sm text-red-400 cursor-help" title={withdrawal.errorMessage}>
+                                                        Error
                                                     </span>
                                                 )}
                                             </td>
@@ -430,7 +453,10 @@ export default function WithdrawalDashboard() {
                                                             : "Complete on Ethereum"}
                                                     </button>
                                                 ) : withdrawal.status === "pending" ? (
-                                                    <span className="text-gray-500 text-sm">Waiting for validator...</span>
+                                                    <span className="text-yellow-400 text-sm flex items-center justify-center gap-2">
+                                                        <span className="inline-block w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                                                        Awaiting validator signature...
+                                                    </span>
                                                 ) : (
                                                     <span className="text-gray-500 text-sm">—</span>
                                                 )}
@@ -445,19 +471,19 @@ export default function WithdrawalDashboard() {
 
                 {/* Info Box */}
                 <div className="mt-6 bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-                    <h3 className="text-blue-200 font-semibold mb-2">ℹ️ How Withdrawals Work</h3>
+                    <h3 className="text-blue-200 font-semibold mb-2">How Withdrawals Work</h3>
                     <ul className="text-blue-300 text-sm space-y-1 list-disc list-inside">
                         <li>
-                            <strong>Step 1:</strong> Click "New Withdrawal" to burn USDC on Block52 and create a withdrawal request
+                            <strong>Step 1 (Block52):</strong> Send a withdrawal request signed by your cosmos address
+                            with your Ethereum address in the message. The validator then signs the withdrawal payload
+                            for the deposit contract.
                         </li>
                         <li>
-                            <strong>Step 2:</strong> Validators automatically sign your withdrawal (usually within a few blocks)
+                            <strong>Step 2 (Ethereum):</strong> Once the validator has signed, call the deposit
+                            contract withdraw function on Ethereum using MetaMask.
                         </li>
-                        <li>
-                            <strong>Step 3:</strong> Once signed, click "Complete on Ethereum" to receive USDC on Ethereum
-                        </li>
-                        <li>Make sure your Ethereum wallet is connected before completing withdrawals</li>
-                        <li>Each withdrawal requires two transactions: one on Block52, one on Ethereum</li>
+                        <li>Pending withdrawals auto-refresh every 5 seconds until the validator signs.</li>
+                        <li>Make sure your Ethereum wallet is connected before completing withdrawals.</li>
                     </ul>
                 </div>
             </div>

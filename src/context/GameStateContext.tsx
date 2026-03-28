@@ -11,7 +11,6 @@ const AVATAR_SYNC_DEBUG =
     typeof process !== "undefined" &&
     process.env.NODE_ENV !== "production" &&
     ["1", "true"].includes((process.env.VITE_DEBUG_AVATAR_SYNC || "").toLowerCase());
-
 /**
  * GameStateContext - Centralized WebSocket state management
  *
