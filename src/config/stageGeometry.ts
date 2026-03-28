@@ -455,12 +455,12 @@ export const VIEWPORT_PARAMS: Record<ViewportMode, {
 }> = {
     "desktop": {
         paddingH: 40,
-        paddingV: 20,
+        paddingV: 10,
         footerOverlay: 160      // footer is fixed h-[160px] overlay at bottom
     },
     "tablet": {
         paddingH: 40,
-        paddingV: 20,
+        paddingV: 10,
         footerOverlay: 160      // same as desktop
     },
     "mobile-landscape": {
@@ -492,8 +492,8 @@ const MAX_GLOBAL_SCALE = 2.0;
  * bottom: badge + stack + progress bar below bottommost seat
  */
 export const PLAYER_UI_PADDING: Record<ViewportMode, { x: number; top: number; bottom: number }> = {
-    "desktop":          { x: 100, top: 150, bottom: 120 },  // matches actual component sizes (cards above + badge below, scaled by COMPONENT_SCALE 1.2)
-    "tablet":           { x: 100, top: 150, bottom: 120 },
+    "desktop":          { x: 80, top: 100, bottom: 80 },   // tighter bounds → higher zoom → bigger table
+    "tablet":           { x: 80, top: 100, bottom: 80 },
     "mobile-landscape": { x: 60, top: 160, bottom: 30 },   // same pattern, tighter for mobile
     "mobile-portrait":  { x: 60, top: 140, bottom: 40 },   // tighter for portrait rotation
 };
