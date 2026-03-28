@@ -181,8 +181,9 @@ const CHIP_DISTANCE = 0.38;
  *  for all seats including top (5,6) and edge (7,8) positions. */
 const DEALER_DISTANCE = 0.43;
 
-/** How many pixels down the turn animation ring sits below the player */
-const TURN_ANIM_Y_OFFSET = 80;
+/** How many pixels down the turn animation ring sits below the seat coordinate.
+ *  30px puts it on the badge center (player is 140px tall, centered via translate-y-50%). */
+const TURN_ANIM_Y_OFFSET = 30;
 
 // ─── Position Generators ─────────────────────────────────────────────
 

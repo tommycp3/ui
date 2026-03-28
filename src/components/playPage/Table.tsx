@@ -275,8 +275,9 @@ const GeometryDebugOverlay: React.FC<{
     for (const [x, y] of coords) { sMinX = Math.min(sMinX, trx(x)); sMaxX = Math.max(sMaxX, trx(x)); sMinY = Math.min(sMinY, tryy(y)); sMaxY = Math.max(sMaxY, tryy(y)); }
 
     const tableDivEl = tableDivRef?.current;
-    const containerParent = tableDivEl?.closest(".body-container");
-    const headerBottom = containerParent?.getBoundingClientRect()?.top ?? 0;
+    const containerParent = tableDivEl?.closest(".table-container");
+    const headerEl = containerParent?.querySelector(".sub-header");
+    const headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : (containerParent?.getBoundingClientRect()?.top ?? 0);
     const footerHeight = mode === "mobile-landscape" ? 80 : 160;
     const footerTop = window.innerHeight - footerHeight;
     const tableRect = tableDivEl?.getBoundingClientRect();
@@ -300,11 +301,44 @@ const GeometryDebugOverlay: React.FC<{
                 {coords.map(([sx, sy], i) => (<line key={`line-${i}`} x1={centerX} y1={centerY} x2={trx(sx)} y2={tryy(sy)} stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} strokeDasharray="6 3" />))}
                 {coords.map(([sx, sy], i) => (<g key={`seat-${i}`}><circle cx={trx(sx)} cy={tryy(sy)} r={14} fill="#3b82f6" stroke="white" strokeWidth={1.5} opacity={0.9} /><text x={trx(sx)} y={tryy(sy) + 4} fill="white" fontSize={10} fontFamily="monospace" fontWeight="bold" textAnchor="middle">{i + 1}</text></g>))}
             </svg>
+            {/* Header/footer lines and info panel are rendered by GeometryFixedOverlay outside the zoom-wrapper */}
+        </>
+    );
+};
+
+/** DEBUG: Fixed overlay for header/footer lines + info panel.
+ *  Rendered OUTSIDE the zoom-wrapper so position:fixed actually works. */
+const GeometryFixedOverlay: React.FC<{
+    containerWidth: number; containerHeight: number; zoom: number; tableSize: number;
+}> = ({ containerWidth, containerHeight, zoom, tableSize }) => {
+    const debug = useDebugToggle();
+    const [panelPos, setPanelPos] = useState({ x: 20, y: 20 });
+    const [dragging, setDragging] = useState(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    if (!debug.showGeometry) return null;
+
+    const ts = tableSize as TableSize;
+    const coords = SEAT_COORDS[ts] || SEAT_COORDS[9];
+    const bounds = getContentBounds(ts);
+    const mode = getViewportMode();
+    const params = VIEWPORT_PARAMS[mode];
+    const pad = PLAYER_UI_PADDING[mode];
+    const usableW = containerWidth - params.paddingH;
+    const usableH = containerHeight - params.footerOverlay - params.paddingV;
+    const footerHeight = mode === "mobile-landscape" ? 80 : 160;
+    const footerTop = window.innerHeight - footerHeight;
+
+    // Find header bottom from DOM
+    const headerEl = document.querySelector(".sub-header");
+    const headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : 0;
+
+    return (
+        <>
             <svg style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 999990, pointerEvents: "none" }}>
                 <line x1={0} y1={headerBottom} x2={window.innerWidth} y2={headerBottom} stroke="#f97316" strokeWidth={2} opacity={0.8} />
-                <text x={8} y={headerBottom + 14} fill="#f97316" fontSize={10} fontFamily="monospace">header bottom</text>
+                <text x={8} y={headerBottom + 14} fill="#f97316" fontSize={10} fontFamily="monospace">header bottom (y={headerBottom.toFixed(0)})</text>
                 <line x1={0} y1={footerTop} x2={window.innerWidth} y2={footerTop} stroke="#f97316" strokeWidth={2} opacity={0.8} />
-                <text x={8} y={footerTop - 6} fill="#f97316" fontSize={10} fontFamily="monospace">footer top</text>
+                <text x={8} y={footerTop - 6} fill="#f97316" fontSize={10} fontFamily="monospace">footer top (y={footerTop.toFixed(0)})</text>
             </svg>
             <div style={{ position: "fixed", left: panelPos.x, top: panelPos.y, zIndex: 999999, backgroundColor: "rgba(0,0,0,0.9)", color: "white", padding: "10px 14px", borderRadius: 8, fontFamily: "monospace", fontSize: 12, lineHeight: 1.7, cursor: dragging ? "grabbing" : "grab", userSelect: "none", border: "1px solid #f472b6", minWidth: 340 }}
                 onMouseDown={(e) => { e.preventDefault(); setDragging(true); dragStart.current = { x: e.clientX - panelPos.x, y: e.clientY - panelPos.y }; const onMove = (ev: MouseEvent) => setPanelPos({ x: ev.clientX - dragStart.current.x, y: ev.clientY - dragStart.current.y }); const onUp = () => { setDragging(false); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); }; window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp); }}>
@@ -314,10 +348,7 @@ const GeometryDebugOverlay: React.FC<{
                 <div>usable: {usableW.toFixed(0)}x{usableH.toFixed(0)} (footer={params.footerOverlay})</div>
                 <div style={{ color: "#4ade80" }}>bounds: {bounds.width.toFixed(0)}x{bounds.height.toFixed(0)} center=({bounds.centerX.toFixed(0)},{bounds.centerY.toFixed(0)})</div>
                 <div style={{ color: "#22d3ee" }}>seats: {coords.length} | scaleH={usableH > 0 ? (usableH / bounds.height).toFixed(3) : "?"} scaleW={usableW > 0 ? (usableW / bounds.width).toFixed(3) : "?"}</div>
-                <div style={{ color: "#f97316" }}>gap top: {gapTop.toFixed(0)}px | gap bottom: {gapBottom.toFixed(0)}px</div>
-                <div style={{ color: Math.abs(gapTop) < 5 && Math.abs(gapBottom) < 5 ? "#4ade80" : "#f97316" }}>
-                    {Math.abs(gapTop) < 5 && Math.abs(gapBottom) < 5 ? "FLUSH" : `need: top pad ${(pad.top + gapTop).toFixed(0)}, bot pad ${(pad.bottom + gapBottom).toFixed(0)}`}
-                </div>
+                <div style={{ color: "#f97316" }}>header: {headerBottom.toFixed(0)}px | footer: {footerTop}px | avail: {(footerTop - headerBottom).toFixed(0)}px</div>
             </div>
         </>
     );
@@ -824,6 +855,12 @@ const Table = React.memo(() => {
             {/* DEBUG OVERLAY: Press D/C/B/S/G to toggle debug tools */}
             <LayoutDebugOverlay />
             <GeometryToggleButton />
+            <GeometryFixedOverlay
+                containerWidth={tableLayout.containerWidth}
+                containerHeight={tableLayout.containerHeight}
+                zoom={tableLayout.zoom}
+                tableSize={tableSize}
+            />
 
             {/*//! HEADER - CASINO STYLE - Hidden in mobile landscape */}
             <TableHeader
