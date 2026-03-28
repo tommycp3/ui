@@ -146,10 +146,10 @@ NetworkDisplay.displayName = "NetworkDisplay";
 
 // Global debug state — shared between LayoutDebugOverlay and Table component
 // Press D = draggable overlay, C = chip markers, B = dealer markers, S = seat markers, G = geometry
-let _debugChips = true;
-let _debugDealers = true;
-let _debugSeats = true;
-let _debugGeometry = true;
+let _debugChips = false;
+let _debugDealers = false;
+let _debugSeats = false;
+let _debugGeometry = false;
 const debugListeners: Set<() => void> = new Set();
 function useDebugToggle() {
     const [, forceUpdate] = useState(0);
@@ -170,11 +170,13 @@ const LayoutDebugOverlay = () => {
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
-            if (e.key === "d" || e.key === "D") setVisible(v => !v);
-            if (e.key === "c" || e.key === "C") { _debugChips = !_debugChips; debugListeners.forEach(cb => cb()); }
-            if (e.key === "b" || e.key === "B") { _debugDealers = !_debugDealers; debugListeners.forEach(cb => cb()); }
-            if (e.key === "s" || e.key === "S") { _debugSeats = !_debugSeats; debugListeners.forEach(cb => cb()); }
-            if (e.key === "g" || e.key === "G") { _debugGeometry = !_debugGeometry; debugListeners.forEach(cb => cb()); }
+            // 1=all overlays, 2=geometry, 3=seats, 4=chips, 5=dealers, 6=crosshair
+            if (e.key === "1") { const s = !_debugGeometry; _debugGeometry = s; _debugChips = s; _debugDealers = s; _debugSeats = s; debugListeners.forEach(cb => cb()); }
+            if (e.key === "2") { _debugGeometry = !_debugGeometry; debugListeners.forEach(cb => cb()); }
+            if (e.key === "3") { _debugSeats = !_debugSeats; debugListeners.forEach(cb => cb()); }
+            if (e.key === "4") { _debugChips = !_debugChips; debugListeners.forEach(cb => cb()); }
+            if (e.key === "5") { _debugDealers = !_debugDealers; debugListeners.forEach(cb => cb()); }
+            if (e.key === "6") setVisible(v => !v);
         };
         window.addEventListener("keydown", handleKey);
         return () => window.removeEventListener("keydown", handleKey);
@@ -208,7 +210,7 @@ const LayoutDebugOverlay = () => {
                 <span style={{ color: "white", fontSize: 10, fontWeight: "bold" }}>+</span>
             </div>
             <div style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.85)", color: "white", padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", fontSize: 12, lineHeight: 1.6, pointerEvents: "auto", minWidth: 220 }}>
-                <div style={{ color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>DEBUG (D=drag C=chips B=dealer S=seats G=geometry)</div>
+                <div style={{ color: "#f87171", fontWeight: "bold", marginBottom: 4 }}>DEBUG (1=all 2=geo 3=seats 4=chips 5=dealers 6=crosshair)</div>
                 <div>Viewport: {window.innerWidth}x{window.innerHeight}</div>
                 <div>Mouse: {mousePos.x}, {mousePos.y}</div>
                 <div style={{ color: "#4ade80" }}>Marker: {pos.x}, {pos.y}</div>
@@ -357,7 +359,7 @@ const GeometryFixedOverlay: React.FC<{
 const GeometryToggleButton: React.FC = () => {
     const debug = useDebugToggle();
     return (
-        <button onClick={() => { _debugGeometry = !_debugGeometry; debugListeners.forEach(cb => cb()); }}
+        <button onClick={() => { const s = !_debugGeometry; _debugGeometry = s; _debugChips = s; _debugDealers = s; _debugSeats = s; debugListeners.forEach(cb => cb()); }}
             style={{ position: "fixed", bottom: 12, left: 12, zIndex: 999999, padding: "6px 12px", borderRadius: 6, border: `2px solid ${debug.showGeometry ? "#f472b6" : "#555"}`, backgroundColor: debug.showGeometry ? "rgba(244,114,182,0.2)" : "rgba(0,0,0,0.6)", color: debug.showGeometry ? "#f472b6" : "#888", fontSize: 12, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer" }}>
             [G] Geometry
         </button>
@@ -630,6 +632,7 @@ const Table = React.memo(() => {
     const [isMobileLandscape, setIsMobileLandscape] = useState(
         window.innerWidth <= 1024 && window.innerWidth > window.innerHeight && window.innerHeight <= 600
     );
+    const [tableStyle, setTableStyle] = useState<"modern" | "classic">("modern");
 
     // Update viewport mode on window resize
     useEffect(() => {
@@ -855,7 +858,27 @@ const Table = React.memo(() => {
         <div className="table-container">
             {/* DEBUG OVERLAY: Press D/C/B/S/G to toggle debug tools */}
             <LayoutDebugOverlay />
-            <GeometryToggleButton />
+            {/* Table style toggle */}
+            <button
+                onClick={() => setTableStyle(s => s === "modern" ? "classic" : "modern")}
+                style={{
+                    position: "fixed",
+                    bottom: 12,
+                    left: 12,
+                    zIndex: 999999,
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "2px solid #555",
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    color: "#ccc",
+                    fontSize: 12,
+                    fontFamily: "monospace",
+                    fontWeight: "bold",
+                    cursor: "pointer"
+                }}
+            >
+                Table: {tableStyle === "modern" ? "Modern" : "Classic"}
+            </button>
             <GeometryFixedOverlay
                 containerWidth={tableLayout.containerWidth}
                 containerHeight={tableLayout.containerHeight}
@@ -934,10 +957,21 @@ const Table = React.memo(() => {
                     className={`${isMobile ? "zoom-wrapper-mobile" : "zoom-wrapper-desktop"}`}
                     style={{ transform: tableLayout.tableTransform }}
                 >
-                    {/*//! 900x450 table coordinate space — positioned at TABLE_ORIGIN (350,310) in the 1600x850 stage */}
-                    <div ref={tableDivRef} className="w-[900px] h-[450px] absolute" style={{ left: "350px", top: "310px" }}>
-                        {/* Table oval surface */}
-                        <div className="table-surface-shadow z-20 relative flex flex-col w-[900px] h-[450px] text-center border-[3px] border-solid rounded-[225px] items-center justify-center" style={{ borderColor: "rgba(255, 255, 255, 0.2)" }}>
+                    {/*//! 1000x500 table coordinate space — positioned at TABLE_ORIGIN (300,285) in the 1600x850 stage */}
+                    <div ref={tableDivRef} className="w-[1000px] h-[500px] absolute" style={{ left: "300px", top: "285px" }}>
+                        {/* Outer rail — Ignition-style 3D depth (modern only) */}
+                        {tableStyle === "modern" && <div className="absolute z-10 rounded-[290px]" style={{
+                            width: "1060px",
+                            height: "560px",
+                            left: "-30px",
+                            top: "-30px",
+                            border: "10px solid rgba(100, 75, 40, 0.6)",
+                            boxShadow: "0 12px 48px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.5), inset 0 3px 12px rgba(0,0,0,0.5), inset 0 -2px 6px rgba(255,255,255,0.05)",
+                            background: "linear-gradient(180deg, rgba(80,55,25,0.25) 0%, rgba(40,25,10,0.45) 100%)"
+                        }} />}
+                        {/* Table felt surface */}
+                        <div className={`table-surface-shadow z-20 relative flex flex-col w-[1000px] h-[500px] text-center border-solid rounded-[250px] items-center justify-center ${tableStyle === "classic" ? "border-[3px]" : "border-[2px]"}`}
+                            style={{ borderColor: tableStyle === "classic" ? "rgba(255, 255, 255, 0.3)" : "rgba(255, 255, 255, 0.08)" }}>
                             <TableBoard
                                 clubLogo={clubLogo}
                                 potDisplayValues={potDisplayValues}

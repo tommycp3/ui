@@ -68,9 +68,9 @@ export interface ChipPosition {
 
 export const STAGE_WIDTH = 1600;
 export const STAGE_HEIGHT = 850;
-export const TABLE_WIDTH = 900;
-export const TABLE_HEIGHT = 450;
-export const TABLE_SURFACE_HEIGHT = 450; // Match spec: table surface fills the full 900x450 table div
+export const TABLE_WIDTH = 1000;
+export const TABLE_HEIGHT = 500;
+export const TABLE_SURFACE_HEIGHT = 500; // Match spec: table surface fills the full table div
 export const TABLE_CENTER_X = 800;
 export const TABLE_CENTER_Y = 535;
 export const SEAT_OFFSET = 72;
@@ -171,15 +171,15 @@ export const COMPONENT_SCALE = 1.2;
  *  Positive = further from center (seats spread out, table feels bigger).
  *  Negative = closer to center (seats tighter, table feels smaller).
  *  0 = spec positions from issue #142 (no change). */
-const SEAT_SPREAD = 0;
+const SEAT_SPREAD = -30;
 
 /** How far chips sit from seat toward table center (0 = at seat, 1 = at center) */
-const CHIP_DISTANCE = 0.38;
+const CHIP_DISTANCE = 0.42;
 
 /** How far dealer button sits from seat toward table center.
  *  0.5 = halfway between seat and center — ensures button is ON the table surface
  *  for all seats including top (5,6) and edge (7,8) positions. */
-const DEALER_DISTANCE = 0.43;
+const DEALER_DISTANCE = 0.34;
 
 /** How many pixels down the turn animation ring sits below the seat coordinate.
  *  30px puts it on the badge center (player is 140px tall, centered via translate-y-50%). */
@@ -192,7 +192,7 @@ export type TableSize = 2 | 4 | 6 | 9;
 
 /** Push a seat position outward from table center by SEAT_SPREAD pixels */
 function applySpread(sx: number, sy: number): [number, number] {
-    if (SEAT_SPREAD === 0) return [sx, sy];
+    if ((SEAT_SPREAD as number) === 0) return [sx, sy];
     const dx = sx - TABLE_CENTER_X;
     const dy = sy - TABLE_CENTER_Y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -334,9 +334,16 @@ const VIEWPORT_OFFSETS: Partial<Record<ViewportMode, typeof GLOBAL_OFFSETS>> = {
     "desktop": {
         9: {
             dealers: {
-                0: { dy: -50 },  // D1 — move up so it's above the chips
-                1: { dy: -50 },  // D2
+                1: { dy: -50 },  // D2 — move up so it's above the chips
                 8: { dy: -50 },  // D9
+            }
+        }
+    },
+    "mobile-landscape": {
+        9: {
+            dealers: {
+                1: { dy: -40 },  // D2
+                8: { dy: -40 },  // D9
             }
         }
     }
@@ -465,7 +472,7 @@ export const VIEWPORT_PARAMS: Record<ViewportMode, {
     },
     "mobile-landscape": {
         paddingH: 10,
-        paddingV: 5,
+        paddingV: 15,
         footerOverlay: 80       // mobile landscape footer is 80px
     },
     "mobile-portrait": {
@@ -492,9 +499,9 @@ const MAX_GLOBAL_SCALE = 2.0;
  * bottom: badge + stack + progress bar below bottommost seat
  */
 export const PLAYER_UI_PADDING: Record<ViewportMode, { x: number; top: number; bottom: number }> = {
-    "desktop":          { x: 80, top: 100, bottom: 80 },   // tighter bounds → higher zoom → bigger table
-    "tablet":           { x: 80, top: 100, bottom: 80 },
-    "mobile-landscape": { x: 40, top: 60, bottom: 60 },    // symmetric, tight for landscape
+    "desktop":          { x: 80, top: 90, bottom: 90 },    // symmetric → perfectly centered between header and footer
+    "tablet":           { x: 80, top: 120, bottom: 90 },
+    "mobile-landscape": { x: 40, top: 80, bottom: 60 },    // extra top for browser chrome
     "mobile-portrait":  { x: 60, top: 140, bottom: 40 },   // tighter for portrait rotation
 };
 
