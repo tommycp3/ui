@@ -192,12 +192,7 @@ const Player: React.FC<PlayerProps & { uiPosition?: number }> = memo(
                         />
                     </div>
 
-                    {/* Dealer Button */}
-                    {isDealer && (
-                        <div className="absolute top-[-85px] right-[-40px] w-12 h-12 z-20">
-                            <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
-                        </div>
-                    )}
+                    {/* Dealer Button — rendered at table level using geometry positions */}
                 </div>
             </div>
         );

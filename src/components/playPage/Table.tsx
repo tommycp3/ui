@@ -498,6 +498,7 @@ const Table = React.memo(() => {
 
     // StageGeometry layout system — supports 2/4/6/9 tables, auto-fit to any viewport
     const tableLayout = useTableLayout((tableSize as 2 | 4 | 6 | 9) || 9, tableContainerRef);
+    const { dealerSeat } = useDealerPosition();
 
     // Add the useGameProgress hook
     const { isGameInProgress, handNumber, actionCount, nextToAct } = useGameProgress(id);
@@ -956,6 +957,19 @@ const Table = React.memo(() => {
                                 );
                             })}
                         </div>
+
+                        {/* Dealer Button — rendered at table level using geometry positions */}
+                        {(() => {
+                            const dIdx = dealerSeat != null && dealerSeat > 0 ? dealerSeat - 1 : -1;
+                            const dPos = dIdx >= 0 ? tableLayout.positions.dealers[dIdx] : null;
+                            if (!dPos) return null;
+                            return (
+                                <div className="absolute w-12 h-12 z-[25]"
+                                    style={{ left: dPos.left, top: dPos.top, transform: "translate(-50%, -50%)" }}>
+                                    <img src={CustomDealer} alt="Dealer Button" className="w-full h-full" />
+                                </div>
+                            );
+                        })()}
 
                         {/* Player seats */}
                         <PlayerSeating

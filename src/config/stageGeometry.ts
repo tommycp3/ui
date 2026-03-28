@@ -464,8 +464,8 @@ export const VIEWPORT_PARAMS: Record<ViewportMode, {
         footerOverlay: 160      // same as desktop
     },
     "mobile-landscape": {
-        paddingH: 20,
-        paddingV: 10,
+        paddingH: 10,
+        paddingV: 5,
         footerOverlay: 80       // mobile landscape footer is 80px
     },
     "mobile-portrait": {
@@ -494,7 +494,7 @@ const MAX_GLOBAL_SCALE = 2.0;
 export const PLAYER_UI_PADDING: Record<ViewportMode, { x: number; top: number; bottom: number }> = {
     "desktop":          { x: 80, top: 100, bottom: 80 },   // tighter bounds → higher zoom → bigger table
     "tablet":           { x: 80, top: 100, bottom: 80 },
-    "mobile-landscape": { x: 60, top: 160, bottom: 30 },   // same pattern, tighter for mobile
+    "mobile-landscape": { x: 40, top: 60, bottom: 60 },    // symmetric, tight for landscape
     "mobile-portrait":  { x: 60, top: 140, bottom: 40 },   // tighter for portrait rotation
 };
 
