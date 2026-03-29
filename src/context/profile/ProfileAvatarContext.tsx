@@ -3,11 +3,12 @@ import { useAccount as useWagmiAccount } from "wagmi";
 import { ETH_CHAIN_ID } from "../../config/constants";
 import useUserWalletConnect from "../../hooks/wallet/useUserWalletConnect";
 import useCosmosWallet from "../../hooks/wallet/useCosmosWallet";
+import useSignMessage from "../../hooks/wallet/useSignMessage";
 import { useNetwork } from "../NetworkContext";
 import { useWalletNfts } from "../../hooks/profile/useWalletNfts";
 import type { AvatarSelection, ProfileAvatarState, WalletNftAsset } from "../../types/profile/avatar";
 import { parsePlayerAvatar } from "../../utils/profile/avatarPayload";
-import { signNftAuthorization, broadcastNftRegistration, queryNftAvatar } from "../../utils/profile/nftRegistration";
+import { buildNftAuthorizationMessage, broadcastNftRegistration, queryNftAvatar } from "../../utils/profile/nftRegistration";
 import { getCosmosUrls } from "../../utils/cosmos/urls";
 
 /**
@@ -55,6 +56,7 @@ export const ProfileAvatarProvider: React.FC<{ children: React.ReactNode }> = ({
     const { address: cosmosAddress } = useCosmosWallet();
     const { currentNetwork } = useNetwork();
     const { chain } = useWagmiAccount();
+    const { signMessage } = useSignMessage();
     const _chainId = chain?.id || ETH_CHAIN_ID;
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -134,10 +136,10 @@ export const ProfileAvatarProvider: React.FC<{ children: React.ReactNode }> = ({
     }, []);
 
     /**
-     * Select an NFT avatar: signs with MetaMask then broadcasts to cosmos.
+     * Select an NFT avatar: signs with wallet then broadcasts to cosmos.
      *
      * Flow:
-     *   1. MetaMask personal_sign — "I, <ethAddr>, authorize <cosmosAddr> to use NFT ..."
+     *   1. Wallet personal_sign — "I, <ethAddr>, authorize <cosmosAddr> to use NFT ..."
      *   2. Cosmos tx broadcast — includes ETH signature for validator verification
      *   3. Validator stores: cosmosAddress → (contractAddress, tokenId)
      */
@@ -151,13 +153,14 @@ export const ProfileAvatarProvider: React.FC<{ children: React.ReactNode }> = ({
             setRegistrationError(null);
 
             const doRegistration = async () => {
-                // Step 1: Sign with MetaMask (ETH personal_sign)
-                const { signature } = await signNftAuthorization(
+                // Step 1: Sign with wagmi (ETH personal_sign)
+                const authMessage = buildNftAuthorizationMessage(
                     address,
                     cosmosAddress,
                     asset.contractAddress,
                     asset.tokenId
                 );
+                const signature = await signMessage(authMessage);
 
                 // Step 2: Broadcast to cosmos validator
                 await broadcastNftRegistration(
@@ -184,15 +187,15 @@ export const ProfileAvatarProvider: React.FC<{ children: React.ReactNode }> = ({
 
             doRegistration()
                 .catch((err: unknown) => {
-                    const message = err instanceof Error ? err.message : "Failed to register NFT avatar";
+                    const errMessage = err instanceof Error ? err.message : "Failed to register NFT avatar";
                     console.error("[ProfileAvatar] Registration failed:", err);
-                    setRegistrationError(message);
+                    setRegistrationError(errMessage);
                 })
                 .finally(() => {
                     setIsRegistering(false);
                 });
         },
-        [address, cosmosAddress, currentNetwork]
+        [address, cosmosAddress, currentNetwork, signMessage]
     );
 
     const clearAvatar = useCallback(() => {

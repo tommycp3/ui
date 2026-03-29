@@ -2,7 +2,7 @@
  * useNftRegistration - Hook for the NFT avatar registration flow
  *
  * Handles the 2-step process:
- *   1. Sign authorization message with MetaMask (ETH personal_sign)
+ *   1. Sign authorization message with wagmi (ETH personal_sign)
  *   2. Broadcast signed registration to the cosmos validator
  *
  * The validator verifies the ETH signature and stores on-chain:
@@ -13,8 +13,9 @@ import { useState, useCallback } from "react";
 import { useNetwork } from "../../context/NetworkContext";
 import useCosmosWallet from "../wallet/useCosmosWallet";
 import useUserWalletConnect from "../wallet/useUserWalletConnect";
+import useSignMessage from "../wallet/useSignMessage";
 import {
-    signNftAuthorization,
+    buildNftAuthorizationMessage,
     broadcastNftRegistration,
 } from "../../utils/profile/nftRegistration";
 import type { WalletNftAsset } from "../../types/profile/avatar";
@@ -29,6 +30,7 @@ export const useNftRegistration = (): UseNftRegistrationReturn => {
     const { currentNetwork } = useNetwork();
     const { address: cosmosAddress } = useCosmosWallet();
     const { address: ethAddress, isConnected: isEthConnected } = useUserWalletConnect();
+    const { signMessage } = useSignMessage();
 
     const [isRegistering, setIsRegistering] = useState(false);
     const [registrationError, setRegistrationError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export const useNftRegistration = (): UseNftRegistrationReturn => {
     const registerNft = useCallback(
         async (asset: WalletNftAsset): Promise<string> => {
             if (!isEthConnected || !ethAddress) {
-                throw new Error("MetaMask wallet is not connected");
+                throw new Error("Ethereum wallet is not connected");
             }
 
             if (!cosmosAddress) {
@@ -47,14 +49,15 @@ export const useNftRegistration = (): UseNftRegistrationReturn => {
             setRegistrationError(null);
 
             try {
-                // Step 1: Sign with MetaMask — proves ETH address owner
+                // Step 1: Sign with wagmi — proves ETH address owner
                 // authorizes the cosmos address to use this NFT
-                const { signature } = await signNftAuthorization(
+                const message = buildNftAuthorizationMessage(
                     ethAddress,
                     cosmosAddress,
                     asset.contractAddress,
                     asset.tokenId
                 );
+                const signature = await signMessage(message);
 
                 // Step 2: Broadcast to cosmos validator — signed by cosmos key,
                 // includes the ETH signature for the validator to verify via ecrecover
@@ -77,7 +80,7 @@ export const useNftRegistration = (): UseNftRegistrationReturn => {
                 setIsRegistering(false);
             }
         },
-        [currentNetwork, cosmosAddress, ethAddress, isEthConnected]
+        [currentNetwork, cosmosAddress, ethAddress, isEthConnected, signMessage]
     );
 
     return { registerNft, isRegistering, registrationError };
