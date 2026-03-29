@@ -1,4 +1,5 @@
 import React from "react";
+import { toast } from "react-toastify";
 import { useProfileAvatar } from "../../context/profile/ProfileAvatarContext";
 import { Modal } from "../common/Modal";
 import styles from "./ProfileAvatarModal.module.css";
@@ -6,6 +7,7 @@ import styles from "./ProfileAvatarModal.module.css";
 export const ProfileAvatarModal: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState("");
+    const [addressCopied, setAddressCopied] = React.useState(false);
     const {
         isDrawerOpen,
         closeDrawer,
@@ -34,6 +36,15 @@ export const ProfileAvatarModal: React.FC = () => {
             setIsRefreshing(false);
         }
     }, [refreshWalletNfts]);
+
+    const handleCopyAddress = React.useCallback(() => {
+        if (walletAddress) {
+            navigator.clipboard.writeText(walletAddress);
+            setAddressCopied(true);
+            toast.success("Address copied!");
+            setTimeout(() => setAddressCopied(false), 2000);
+        }
+    }, [walletAddress]);
 
     const filteredWalletNfts = React.useMemo(() => {
         const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -74,8 +85,31 @@ export const ProfileAvatarModal: React.FC = () => {
                     </>
                 ) : (
                     <>
-                        <div className={styles.surfaceMuted}>
-                            <p className={styles.meta}>Wallet: {walletAddress}</p>
+                        <div className={styles.walletAddressRow}>
+                            <label className={styles.walletLabel}>Wallet</label>
+                            <div className={styles.walletInputWrapper}>
+                                <input
+                                    type="text"
+                                    value={walletAddress || ""}
+                                    readOnly
+                                    className={styles.walletInput}
+                                />
+                                <button
+                                    onClick={handleCopyAddress}
+                                    className={styles.copyButton}
+                                    title="Copy address"
+                                >
+                                    {addressCopied ? (
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         {!hasSourceConfigured && (

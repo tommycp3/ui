@@ -24,6 +24,60 @@
   border: 1px solid color-mix(in srgb, var(--brand-primary) 16%, transparent);
 }
 
+.walletAddressRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.walletLabel {
+  color: var(--ui-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.walletInputWrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.walletInput {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
+  color: var(--ui-text-primary);
+  background-color: color-mix(in srgb, var(--ui-bg-medium) 22%, transparent);
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.walletInput:read-only {
+  cursor: default;
+}
+
+.copyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    color-mix(in srgb, var(--brand-primary) 78%, transparent) 100%
+  );
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.copyButton:hover {
+  opacity: 0.8;
+}
+
 .assetGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
