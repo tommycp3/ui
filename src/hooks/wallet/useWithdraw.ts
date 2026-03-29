@@ -37,9 +37,18 @@ const useWithdraw = () => {
       throw new Error("Invalid withdrawal parameters");
     }
 
-    try {
-      // Contract ABI: withdraw(uint256 amount, address receiver, bytes32 nonce, bytes signature)
-      mutate({
+    // Contract ABI: withdraw(uint256 amount, address receiver, bytes32 nonce, bytes signature)
+    console.log("[useWithdraw] Calling withdraw with params:", {
+      bridgeAddress: BRIDGE_ADDRESS,
+      amount: amount.toString(),
+      receiver,
+      nonce,
+      signatureLength: signature.length,
+      signature: signature.slice(0, 20) + "..."
+    });
+
+    mutate(
+      {
         address: BRIDGE_ADDRESS as `0x${string}`,
         abi: abi,
         functionName: FunctionName.Withdraw,
@@ -49,11 +58,16 @@ const useWithdraw = () => {
           nonce as `0x${string}`,
           signature as `0x${string}`
         ]
-      });
-    } catch (err) {
-      console.error("[useWithdraw] Withdrawal transaction failed:", err);
-      throw err;
-    }
+      },
+      {
+        onSuccess: (hash) => {
+          console.log("[useWithdraw] Transaction submitted, hash:", hash);
+        },
+        onError: (err) => {
+          console.error("[useWithdraw] mutate onError:", err);
+        }
+      }
+    );
   }, [userAddress, mutate, BRIDGE_ADDRESS]);
 
   return useMemo(
