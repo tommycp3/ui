@@ -38,14 +38,15 @@ const useWithdraw = () => {
     }
 
     try {
+      // Contract ABI: withdraw(uint256 amount, address receiver, bytes32 nonce, bytes signature)
       mutate({
         address: BRIDGE_ADDRESS as `0x${string}`,
         abi: abi,
         functionName: FunctionName.Withdraw,
         args: [
-          nonce as `0x${string}`,
-          receiver as `0x${string}`,
           amount,
+          receiver as `0x${string}`,
+          nonce as `0x${string}`,
           signature as `0x${string}`
         ]
       });
