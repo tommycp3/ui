@@ -6,9 +6,10 @@ import useUserWalletConnect from "../../hooks/wallet/useUserWalletConnect";
 import { useNetwork } from "../../context/NetworkContext";
 import { getSigningClient } from "../../utils/cosmos/client";
 import { base64ToHex } from "../../utils/encodingUtils";
-import { BRIDGE_WITHDRAWAL_ABI } from "../../utils/bridge/abis";
-import { COSMOS_BRIDGE_ADDRESS } from "../../config/constants";
+import { useWithdraw } from "../../hooks/wallet/useWithdraw";
 import styles from "./WithdrawalModal.module.css";
+
+// ethers is still used for address validation in handleWithdraw
 
 /**
  * WithdrawalModal Component
@@ -46,6 +47,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({ isOpen, onClose, onSu
     const { balance: cosmosBalance, address: cosmosAddress, refreshBalance: refetchAccount } = useCosmosWallet();
     const { address: web3Address, isConnected: isWeb3Connected } = useUserWalletConnect();
     const { currentNetwork } = useNetwork();
+    const { withdraw, hash: withdrawHash, isWithdrawConfirmed, withdrawError } = useWithdraw();
 
     const balanceInUSDC = useMemo(() => {
         const usdcBalanceEntry = cosmosBalance.find(b => b.denom === "usdc");
@@ -233,37 +235,41 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({ isOpen, onClose, onSu
         setError("");
 
         try {
-            const provider = new ethers.BrowserProvider((window as any).ethereum);
-            const signer = await provider.getSigner();
-
-            const contract = new ethers.Contract(COSMOS_BRIDGE_ADDRESS, BRIDGE_WITHDRAWAL_ABI, signer);
-
             const hexSignature = base64ToHex(withdrawalInfo.signature);
 
-            // Call bridge contract: withdraw(amount, receiver, nonce, signature)
-            const tx = await contract.withdraw(
-                withdrawalInfo.amount,
-                withdrawalInfo.baseAddress,
+            // Use the useWithdraw hook which properly uses wagmi/reown wallet
+            await withdraw(
                 withdrawalInfo.nonce,
+                withdrawalInfo.baseAddress,
+                BigInt(withdrawalInfo.amount),
                 hexSignature
             );
 
-            const receipt = await tx.wait();
-
-            if (receipt.status === 1) {
-                setEthTxHash(receipt.hash);
-                setStep("done");
-                if (onSuccess) onSuccess();
-            } else {
-                setError("Ethereum transaction failed");
-                setStep("ready_to_complete");
-            }
+            // The hook will trigger isWithdrawConfirmed when done
         } catch (err: any) {
             console.error("[WithdrawalModal] Ethereum tx error:", err);
             setError(err.message || "Failed to complete withdrawal on Ethereum");
             setStep("ready_to_complete");
         }
     };
+
+    // Handle withdrawal confirmation via useWithdraw hook
+    useEffect(() => {
+        if (isWithdrawConfirmed && step === "completing_eth") {
+            setEthTxHash(withdrawHash || "");
+            setStep("done");
+            if (onSuccess) onSuccess();
+        }
+    }, [isWithdrawConfirmed, withdrawHash, step, onSuccess]);
+
+    // Handle withdrawal errors
+    useEffect(() => {
+        if (withdrawError && step === "completing_eth") {
+            console.error("[WithdrawalModal] Withdrawal error:", withdrawError);
+            setError(withdrawError.message || "Failed to complete withdrawal on Ethereum");
+            setStep("ready_to_complete");
+        }
+    }, [withdrawError, step]);
 
     if (!isOpen) return null;
 
