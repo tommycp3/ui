@@ -47,7 +47,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
-  color: var(--ui-text-primary);
+  color: #ffffff;
   background-color: color-mix(in srgb, var(--ui-bg-medium) 22%, transparent);
   font-family: monospace;
   font-size: 13px;
