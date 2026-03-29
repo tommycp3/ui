@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import useCosmosWallet from "../hooks/wallet/useCosmosWallet";
 import { useNetwork } from "../context/NetworkContext";
 import { toast } from "react-toastify";
@@ -10,6 +10,7 @@ import { AnimatedBackground } from "../components/common/AnimatedBackground";
 import { COSMOS_BRIDGE_ADDRESS } from "../config/constants";
 import useUserWalletConnect from "../hooks/wallet/useUserWalletConnect";
 import { useWithdraw } from "../hooks/wallet/useWithdraw";
+import SignatureModal from "../components/modals/SignatureModal";
 
 /**
  * WithdrawalDashboard - Interface for managing USDC withdrawals to Ethereum
@@ -49,6 +50,10 @@ export default function WithdrawalDashboard() {
     const [withdrawalAmount, setWithdrawalAmount] = useState("");
     const [withdrawalBaseAddress, setWithdrawalBaseAddress] = useState("");
     const [isInitiating, setIsInitiating] = useState(false);
+
+    // Signature modal state
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
+    const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
 
     // Bridge configuration - Ethereum Mainnet
     const bridgeContractAddress = COSMOS_BRIDGE_ADDRESS;
@@ -274,6 +279,22 @@ export default function WithdrawalDashboard() {
     const signedCount = withdrawals.filter(w => w.status === "signed").length;
     const completedCount = withdrawals.filter(w => w.status === "completed").length;
 
+    // Handle opening the signature modal
+    const handleViewSignature = (withdrawal: Withdrawal) => {
+        setSelectedWithdrawal(withdrawal);
+        setShowSignatureModal(true);
+    };
+
+    // Compute hex signature for selected withdrawal
+    const selectedSignatureHex = useMemo(() => {
+        if (!selectedWithdrawal?.signature) return null;
+        try {
+            return base64ToHex(selectedWithdrawal.signature);
+        } catch {
+            return null;
+        }
+    }, [selectedWithdrawal?.signature]);
+
     return (
         <div className="min-h-screen p-8 relative">
             <AnimatedBackground />
@@ -441,26 +462,72 @@ export default function WithdrawalDashboard() {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                {withdrawal.status === "signed" ? (
-                                                    <button
-                                                        onClick={() => handleCompleteWithdrawal(withdrawal)}
-                                                        disabled={
-                                                            processingNonce === withdrawal.nonce || !isConnected || !baseAddress
-                                                        }
-                                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
-                                                    >
-                                                        {processingNonce === withdrawal.nonce
-                                                            ? "Completing..."
-                                                            : "Complete on Ethereum"}
-                                                    </button>
-                                                ) : withdrawal.status === "pending" ? (
-                                                    <span className="text-yellow-400 text-sm flex items-center justify-center gap-2">
-                                                        <span className="inline-block w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-                                                        Awaiting validator signature...
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-500 text-sm">—</span>
-                                                )}
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {withdrawal.status === "signed" ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleCompleteWithdrawal(withdrawal)}
+                                                                disabled={
+                                                                    processingNonce === withdrawal.nonce || !isConnected || !baseAddress
+                                                                }
+                                                                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                                                            >
+                                                                {processingNonce === withdrawal.nonce
+                                                                    ? "Completing..."
+                                                                    : "Complete on Ethereum"}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleViewSignature(withdrawal)}
+                                                                className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-sm font-medium rounded-lg transition-colors"
+                                                                title="View signature details"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth="2"
+                                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                    />
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth="2"
+                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                    />
+                                                                </svg>
+                                                            </button>
+                                                        </>
+                                                    ) : withdrawal.status === "pending" ? (
+                                                        <span className="text-yellow-400 text-sm flex items-center justify-center gap-2">
+                                                            <span className="inline-block w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                                                            Awaiting validator signature...
+                                                        </span>
+                                                    ) : withdrawal.status === "completed" && withdrawal.signature ? (
+                                                        <button
+                                                            onClick={() => handleViewSignature(withdrawal)}
+                                                            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1"
+                                                            title="View signature details"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth="2"
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                />
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth="2"
+                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                />
+                                                            </svg>
+                                                            View Sig
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-gray-500 text-sm">—</span>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -557,6 +624,18 @@ export default function WithdrawalDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Signature Modal */}
+            <SignatureModal
+                isOpen={showSignatureModal}
+                onClose={() => {
+                    setShowSignatureModal(false);
+                    setSelectedWithdrawal(null);
+                }}
+                withdrawal={selectedWithdrawal}
+                signatureHex={selectedSignatureHex}
+                bridgeContractAddress={bridgeContractAddress}
+            />
         </div>
     );
 }
