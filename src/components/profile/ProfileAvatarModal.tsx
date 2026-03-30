@@ -8,6 +8,8 @@ export const ProfileAvatarModal: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState("");
     const [addressCopied, setAddressCopied] = React.useState(false);
+    const [justRegistered, setJustRegistered] = React.useState(false);
+    const prevIsRegistering = React.useRef(false);
     const {
         isDrawerOpen,
         closeDrawer,
@@ -27,6 +29,21 @@ export const ProfileAvatarModal: React.FC = () => {
         isRegistering,
         registrationError
     } = useProfileAvatar();
+
+    // Detect successful registration: isRegistering went from true to false with no error
+    React.useEffect(() => {
+        if (prevIsRegistering.current && !isRegistering && !registrationError) {
+            setJustRegistered(true);
+        }
+        prevIsRegistering.current = isRegistering;
+    }, [isRegistering, registrationError]);
+
+    // Reset success state when drawer closes
+    React.useEffect(() => {
+        if (!isDrawerOpen) {
+            setJustRegistered(false);
+        }
+    }, [isDrawerOpen]);
 
     const handleRefresh = React.useCallback(async () => {
         setIsRefreshing(true);
@@ -119,11 +136,6 @@ export const ProfileAvatarModal: React.FC = () => {
                         )}
 
                         {isLoadingNfts && walletNfts.length === 0 && !isRefreshing && <p className={styles.emptyText}>Scanning wallet NFTs...</p>}
-                        {isRegistering && (
-                            <div className={styles.surfaceMuted}>
-                                <p className={styles.meta}>Registering NFT avatar... Sign with MetaMask when prompted.</p>
-                            </div>
-                        )}
                         {registrationError && <p className={styles.emptyText}>Registration failed: {registrationError}</p>}
                         {nftsError && <p className={styles.emptyText}>{nftsError}</p>}
                         {nftsWarning && <p className={styles.emptyText}>{nftsWarning}</p>}
@@ -159,7 +171,14 @@ export const ProfileAvatarModal: React.FC = () => {
                                         onClick={() => selectAvatar(asset)}
                                         disabled={isRegistering}
                                     >
-                                        <img src={asset.imageUrl} alt={asset.name || `NFT #${asset.tokenId}`} className={styles.nftImage} />
+                                        <div className={styles.nftImageWrapper}>
+                                            <img src={asset.imageUrl} alt={asset.name || `NFT #${asset.tokenId}`} className={styles.nftImage} />
+                                            {isSelected && isRegistering && (
+                                                <div className={styles.nftImageOverlay}>
+                                                    <span className={styles.nftSpinner} />
+                                                </div>
+                                            )}
+                                        </div>
                                         <p className={styles.meta}>{asset.collectionName || "Collection"} • #{asset.tokenId}</p>
                                     </button>
                                 );
@@ -194,7 +213,18 @@ export const ProfileAvatarModal: React.FC = () => {
                             >
                                 Disconnect Wallet
                             </button>
-                            <button className={styles.footerDangerButton} onClick={closeDrawer}>Cancel</button>
+                            <button
+                                className={isRegistering ? styles.footerSecondaryButton : justRegistered ? styles.footerSuccessButton : styles.footerDangerButton}
+                                onClick={closeDrawer}
+                                disabled={isRegistering}
+                            >
+                                {isRegistering ? (
+                                    <span className={styles.buttonLoadingContent}>
+                                        <span className={styles.buttonSpinner} />
+                                        Registering...
+                                    </span>
+                                ) : justRegistered ? "Done. Now Run It Up!" : "Cancel"}
+                            </button>
                         </div>
                     </>
                 )}
