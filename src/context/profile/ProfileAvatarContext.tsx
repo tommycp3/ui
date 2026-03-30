@@ -6,7 +6,7 @@ import useCosmosWallet from "../../hooks/wallet/useCosmosWallet";
 import useSignMessage from "../../hooks/wallet/useSignMessage";
 import { useNetwork } from "../NetworkContext";
 import { useWalletNfts } from "../../hooks/profile/useWalletNfts";
-import type { AvatarSelection, ProfileAvatarState, WalletNftAsset } from "../../types/profile/avatar";
+import type { AvatarSelection, AvatarSelectionStorageV1, ProfileAvatarState, WalletNftAsset } from "../../types/profile/avatar";
 import { parsePlayerAvatar } from "../../utils/profile/avatarPayload";
 import { buildNftAuthorizationMessage, broadcastNftRegistration, queryNftAvatar } from "../../utils/profile/nftRegistration";
 import { resolveNftImageUrl } from "../../utils/profile/nftImageResolver";
@@ -52,6 +52,34 @@ const ProfileAvatarContext = createContext<ProfileAvatarContextType | null>(null
 // Session cache for chain-queried avatars: cosmosAddress → imageUrl
 const chainAvatarCache = new Map<string, string | null>();
 
+const AVATAR_CACHE_KEY = "b52_nft_avatar";
+
+function loadCachedAvatar(cosmosAddr: string): AvatarSelection | null {
+    try {
+        const raw = localStorage.getItem(AVATAR_CACHE_KEY);
+        if (!raw) return null;
+        const stored: AvatarSelectionStorageV1 = JSON.parse(raw);
+        if (stored.version !== 1 || stored.walletAddress.toLowerCase() !== cosmosAddr.toLowerCase()) return null;
+        return stored.selection;
+    } catch {
+        return null;
+    }
+}
+
+function saveCachedAvatar(cosmosAddr: string, selection: AvatarSelection | null) {
+    if (!selection) {
+        localStorage.removeItem(AVATAR_CACHE_KEY);
+        return;
+    }
+    const stored: AvatarSelectionStorageV1 = {
+        version: 1,
+        chainId: 1,
+        walletAddress: cosmosAddr,
+        selection
+    };
+    localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(stored));
+}
+
 export const ProfileAvatarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isConnected, address, open, disconnect } = useUserWalletConnect();
     const { address: cosmosAddress } = useCosmosWallet();
@@ -61,9 +89,18 @@ export const ProfileAvatarProvider: React.FC<{ children: React.ReactNode }> = ({
     const _chainId = chain?.id || ETH_CHAIN_ID;
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [selectedAvatar, setSelectedAvatar] = useState<AvatarSelection | null>(null);
+    const [selectedAvatar, setSelectedAvatar] = useState<AvatarSelection | null>(() =>
+        cosmosAddress ? loadCachedAvatar(cosmosAddress) : null
+    );
     const [isRegistering, setIsRegistering] = useState(false);
     const [registrationError, setRegistrationError] = useState<string | null>(null);
+
+    // Persist avatar selection to localStorage
+    useEffect(() => {
+        if (cosmosAddress) {
+            saveCachedAvatar(cosmosAddress, selectedAvatar);
+        }
+    }, [selectedAvatar, cosmosAddress]);
 
     // Track in-flight chain queries to avoid duplicate requests
     const pendingQueriesRef = useRef(new Set<string>());
