@@ -24,6 +24,59 @@
   border: 1px solid color-mix(in srgb, var(--brand-primary) 16%, transparent);
 }
 
+.walletAddressRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.walletLabel {
+  color: var(--ui-text-secondary);
+  font-size: 14px;
+}
+
+.walletInputWrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.walletInput {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
+  color: #ffffff;
+  background-color: color-mix(in srgb, var(--ui-bg-medium) 22%, transparent);
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.walletInput:read-only {
+  cursor: default;
+}
+
+.copyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    color-mix(in srgb, var(--brand-primary) 78%, transparent) 100%
+  );
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.copyButton:hover {
+  opacity: 0.8;
+}
+
 .assetGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -45,11 +98,34 @@
   border-color: var(--brand-primary);
 }
 
+.nftImageWrapper {
+  position: relative;
+}
+
 .nftImage {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 8px;
+}
+
+.nftImageOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nftSpinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  animation: avatarSpin 0.8s linear infinite;
 }
 
 .meta {
@@ -92,7 +168,8 @@
 
 .footerSecondaryButton,
 .footerPrimaryButton,
-.footerDangerButton {
+.footerDangerButton,
+.footerSuccessButton {
   min-height: 40px;
   width: 100%;
   padding: 10px 14px;
@@ -133,6 +210,16 @@
     135deg,
     var(--accent-danger) 0%,
     color-mix(in srgb, var(--accent-danger) 80%, transparent) 100%
+  );
+}
+
+.footerSuccessButton {
+  border: 1px solid color-mix(in srgb, #22c55e 25%, transparent);
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    #22c55e 0%,
+    color-mix(in srgb, #22c55e 80%, transparent) 100%
   );
 }
 
@@ -179,7 +266,8 @@
 
   .footerSecondaryButton,
   .footerPrimaryButton,
-  .footerDangerButton {
+  .footerDangerButton,
+  .footerSuccessButton {
     width: 100%;
   }
 }

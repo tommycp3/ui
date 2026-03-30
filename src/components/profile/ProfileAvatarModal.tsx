@@ -1,4 +1,5 @@
 import React from "react";
+import { toast } from "react-toastify";
 import { useProfileAvatar } from "../../context/profile/ProfileAvatarContext";
 import { Modal } from "../common/Modal";
 import styles from "./ProfileAvatarModal.module.css";
@@ -6,6 +7,10 @@ import styles from "./ProfileAvatarModal.module.css";
 export const ProfileAvatarModal: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState("");
+    const [addressCopied, setAddressCopied] = React.useState(false);
+    const [justRegistered, setJustRegistered] = React.useState(false);
+    const [registeringAssetId, setRegisteringAssetId] = React.useState<string | null>(null);
+    const prevIsRegistering = React.useRef(false);
     const {
         isDrawerOpen,
         closeDrawer,
@@ -21,8 +26,28 @@ export const ProfileAvatarModal: React.FC = () => {
         clearAvatar,
         refreshWalletNfts,
         disconnectWallet,
-        hasSourceConfigured
+        hasSourceConfigured,
+        isRegistering,
+        registrationError
     } = useProfileAvatar();
+
+    // Detect registration completion
+    React.useEffect(() => {
+        if (prevIsRegistering.current && !isRegistering) {
+            setRegisteringAssetId(null);
+            if (!registrationError) {
+                setJustRegistered(true);
+            }
+        }
+        prevIsRegistering.current = isRegistering;
+    }, [isRegistering, registrationError]);
+
+    // Reset success state when drawer closes
+    React.useEffect(() => {
+        if (!isDrawerOpen) {
+            setJustRegistered(false);
+        }
+    }, [isDrawerOpen]);
 
     const handleRefresh = React.useCallback(async () => {
         setIsRefreshing(true);
@@ -32,6 +57,15 @@ export const ProfileAvatarModal: React.FC = () => {
             setIsRefreshing(false);
         }
     }, [refreshWalletNfts]);
+
+    const handleCopyAddress = React.useCallback(() => {
+        if (walletAddress) {
+            navigator.clipboard.writeText(walletAddress);
+            setAddressCopied(true);
+            toast.success("Address copied!");
+            setTimeout(() => setAddressCopied(false), 2000);
+        }
+    }, [walletAddress]);
 
     const filteredWalletNfts = React.useMemo(() => {
         const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -72,8 +106,31 @@ export const ProfileAvatarModal: React.FC = () => {
                     </>
                 ) : (
                     <>
-                        <div className={styles.surfaceMuted}>
-                            <p className={styles.meta}>Wallet: {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}</p>
+                        <div className={styles.walletAddressRow}>
+                            <label className={styles.walletLabel}>Wallet</label>
+                            <div className={styles.walletInputWrapper}>
+                                <input
+                                    type="text"
+                                    value={walletAddress || ""}
+                                    readOnly
+                                    className={styles.walletInput}
+                                />
+                                <button
+                                    onClick={handleCopyAddress}
+                                    className={styles.copyButton}
+                                    title="Copy address"
+                                >
+                                    {addressCopied ? (
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         {!hasSourceConfigured && (
@@ -83,6 +140,7 @@ export const ProfileAvatarModal: React.FC = () => {
                         )}
 
                         {isLoadingNfts && walletNfts.length === 0 && !isRefreshing && <p className={styles.emptyText}>Scanning wallet NFTs...</p>}
+                        {registrationError && <p className={styles.emptyText}>Registration failed: {registrationError}</p>}
                         {nftsError && <p className={styles.emptyText}>{nftsError}</p>}
                         {nftsWarning && <p className={styles.emptyText}>{nftsWarning}</p>}
 
@@ -114,9 +172,17 @@ export const ProfileAvatarModal: React.FC = () => {
                                     <button
                                         key={asset.id}
                                         className={`${styles.card} ${isSelected ? styles.cardSelected : ""}`.trim()}
-                                        onClick={() => selectAvatar(asset)}
+                                        onClick={() => { setRegisteringAssetId(asset.id); selectAvatar(asset); }}
+                                        disabled={isRegistering}
                                     >
-                                        <img src={asset.imageUrl} alt={asset.name || `NFT #${asset.tokenId}`} className={styles.nftImage} />
+                                        <div className={styles.nftImageWrapper}>
+                                            <img src={asset.imageUrl} alt={asset.name || `NFT #${asset.tokenId}`} className={styles.nftImage} />
+                                            {registeringAssetId === asset.id && isRegistering && (
+                                                <div className={styles.nftImageOverlay}>
+                                                    <span className={styles.nftSpinner} />
+                                                </div>
+                                            )}
+                                        </div>
                                         <p className={styles.meta}>{asset.collectionName || "Collection"} • #{asset.tokenId}</p>
                                     </button>
                                 );
@@ -151,7 +217,18 @@ export const ProfileAvatarModal: React.FC = () => {
                             >
                                 Disconnect Wallet
                             </button>
-                            <button className={styles.footerDangerButton} onClick={closeDrawer}>Cancel</button>
+                            <button
+                                className={isRegistering ? styles.footerSecondaryButton : justRegistered ? styles.footerSuccessButton : styles.footerDangerButton}
+                                onClick={closeDrawer}
+                                disabled={isRegistering}
+                            >
+                                {isRegistering ? (
+                                    <span className={styles.buttonLoadingContent}>
+                                        <span className={styles.buttonSpinner} />
+                                        Registering...
+                                    </span>
+                                ) : justRegistered ? "Done. Now Run It Up!" : "Cancel"}
+                            </button>
                         </div>
                     </>
                 )}
