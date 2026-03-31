@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useFindGames, GameWithFormat } from "../hooks/game/useFindGames";
 import { useDeleteGame } from "../hooks/game/useDeleteGame";
 import useCosmosWallet from "../hooks/wallet/useCosmosWallet";
 import { formatMicroAsUsdc } from "../constants/currency";
 import { sortTablesByAvailableSeats } from "../utils/tableSortingUtils";
 import { isTournamentFormat, formatGameFormatDisplay, formatGameVariantDisplay } from "../utils/gameFormatUtils";
+import DeleteTableModal from "./modals/DeleteTableModal";
 import styles from "./TableList.module.css";
 
 /**
@@ -37,8 +38,7 @@ const TableList: React.FC = () => {
     const { games: rawGames, isLoading, error, refetch } = useFindGames();
     const { deleteGame, isDeleting } = useDeleteGame();
     const { address: cosmosAddress } = useCosmosWallet();
-    const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+    const [deleteModalGameId, setDeleteModalGameId] = useState<string | null>(null);
 
     // Sort games by available seats (least empty seats first, full tables last)
     const games = React.useMemo(() => {
@@ -66,16 +66,14 @@ const TableList: React.FC = () => {
     };
 
     // Handle delete game
-    const handleDeleteGame = async (gameId: string) => {
-        setDeletingGameId(gameId);
-        setShowDeleteConfirm(null);
-        const result = await deleteGame(gameId);
-        setDeletingGameId(null);
+    const handleDeleteGame = useCallback(async () => {
+        if (!deleteModalGameId) return;
+        const result = await deleteGame(deleteModalGameId);
         if (result) {
             // Refresh the games list after successful deletion
             refetch();
         }
-    };
+    }, [deleteModalGameId, deleteGame, refetch]);
 
     // Check if user is the creator of a game
     const isCreator = (game: GameWithFormat) => {
@@ -245,44 +243,22 @@ const TableList: React.FC = () => {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             {canDelete(game) && (
-                                                <>
-                                                    {showDeleteConfirm === game.gameId ? (
-                                                        <div className="flex items-center justify-center gap-1">
-                                                            <button
-                                                                onClick={() => handleDeleteGame(game.gameId)}
-                                                                disabled={isDeleting || deletingGameId === game.gameId}
-                                                                className="px-2 py-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white text-xs font-semibold rounded transition-colors"
-                                                                title="Confirm delete"
-                                                            >
-                                                                {deletingGameId === game.gameId ? "..." : "Yes"}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setShowDeleteConfirm(null)}
-                                                                className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs font-semibold rounded transition-colors"
-                                                                title="Cancel"
-                                                            >
-                                                                No
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => setShowDeleteConfirm(game.gameId)}
-                                                            disabled={isDeleting}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
-                                                            title="Delete table"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth="2"
-                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                                />
-                                                            </svg>
-                                                            Delete
-                                                        </button>
-                                                    )}
-                                                </>
+                                                <button
+                                                    onClick={() => setDeleteModalGameId(game.gameId)}
+                                                    disabled={isDeleting}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                                                    title="Delete table"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                        />
+                                                    </svg>
+                                                    Delete
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
@@ -292,6 +268,14 @@ const TableList: React.FC = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* Delete Table Modal */}
+            <DeleteTableModal
+                isOpen={!!deleteModalGameId}
+                onClose={() => setDeleteModalGameId(null)}
+                onConfirm={handleDeleteGame}
+                gameId={deleteModalGameId || ""}
+            />
         </div>
     );
 };
