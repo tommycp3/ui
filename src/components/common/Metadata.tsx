@@ -65,6 +65,8 @@ const Metadata: React.FC<MetadataProps> = ({
             removeMeta("twitter:title");
             removeMeta("twitter:description");
             removeMeta("twitter:image");
+            removeMeta("twitter:url");
+            removeMeta("twitter:domain");
             removeMeta("og:type", "property");
             removeMeta("og:title", "property");
             removeMeta("og:description", "property");
