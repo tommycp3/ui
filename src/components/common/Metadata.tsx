@@ -45,6 +45,8 @@ const Metadata: React.FC<MetadataProps> = ({
 
         // Twitter Card
         setMeta("twitter:card", "summary_large_image");
+        setMeta("twitter:domain", "app.block52.com");
+        setMeta("twitter:url", window.location.href);
         setMeta("twitter:title", title);
         setMeta("twitter:description", description);
         setMeta("twitter:image", image);
@@ -54,6 +56,8 @@ const Metadata: React.FC<MetadataProps> = ({
         setMeta("og:title", title, "property");
         setMeta("og:description", description, "property");
         setMeta("og:image", image, "property");
+        setMeta("og:url", window.location.href, "property");
+        setMeta("og:logo", image, "property");
 
         return () => {
             document.title = prev;
@@ -65,6 +69,8 @@ const Metadata: React.FC<MetadataProps> = ({
             removeMeta("og:title", "property");
             removeMeta("og:description", "property");
             removeMeta("og:image", "property");
+            removeMeta("og:url", "property");
+            removeMeta("og:logo", "property");
         };
     }, [title, description, image]);
 
