@@ -32,10 +32,6 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ currentStack, minBuyIn, maxBuyI
 
     const [topUpAmount, setTopUpAmount] = useState(() => maxTopUpFormatted);
 
-    const sliderStep = 0.01;
-    const sliderMin = useMemo(() => parseFloat(minTopUpFormatted), [minTopUpFormatted]);
-    const sliderMax = useMemo(() => parseFloat(maxTopUpFormatted), [maxTopUpFormatted]);
-
     const canTopUp = useMemo(() => {
         return parseFloat(maxTopUpFormatted) > 0;
     }, [maxTopUpFormatted]);
@@ -44,13 +40,6 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ currentStack, minBuyIn, maxBuyI
         setTopUpAmount(amount);
         setTopUpError("");
     }, []);
-
-    const handleSliderChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            handleTopUpChange(parseFloat(e.target.value).toFixed(2));
-        },
-        [handleTopUpChange]
-    );
 
     const handleMinClick = useCallback(() => {
         handleTopUpChange(minTopUpFormatted);
@@ -158,25 +147,18 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ currentStack, minBuyIn, maxBuyI
                         <div className="font-bold">${maxTopUpFormatted}</div>
                     </button>
                 </div>
-                <div className="flex-1 space-y-3">
-                    {/* Slider */}
+                <div className="flex-1">
                     <input
-                        type="range"
-                        min={sliderMin}
-                        max={sliderMax}
-                        step={sliderStep}
-                        value={isNaN(parseFloat(topUpAmount)) ? sliderMin : parseFloat(topUpAmount)}
-                        onChange={handleSliderChange}
-                        className={styles.slider}
-                        disabled={sliderMax <= sliderMin}
-                    />
-                    {/* Read-only display of current value */}
-                    <div
+                        type="number"
+                        min={minTopUpFormatted}
+                        max={maxTopUpFormatted}
+                        step="0.01"
+                        value={topUpAmount}
+                        onChange={e => handleTopUpChange(e.target.value)}
                         className={`w-full p-2 text-white rounded-lg text-center ${styles.amountInput}`}
                         style={isAmountInvalid && topUpAmount ? { borderColor: "red" } : undefined}
-                    >
-                        ${isNaN(parseFloat(topUpAmount)) ? "0.00" : parseFloat(topUpAmount).toFixed(2)}
-                    </div>
+                        placeholder="0.00"
+                    />
                 </div>
             </div>
 
