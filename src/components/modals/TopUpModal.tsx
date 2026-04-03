@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { microToUsdc, usdcToMicroBigInt } from "../../constants/currency";
+import { calculateMinTopUp, calculateMaxTopUp } from "../../utils/topUpUtils";
 import { Modal, LoadingSpinner } from "../common";
 import styles from "./TopUpModal.module.css";
 import type { TopUpModalProps } from "./types";
@@ -14,10 +15,8 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ currentStack, minBuyIn, maxBuyI
         const max = microToUsdc(maxBuyIn);
         const wallet = microToUsdc(walletBalance);
 
-        // Min top-up ensures player reaches at least minBuyIn
-        const minTopUpAmount = current < min ? min - current : 0.01;
-        // Max top-up capped by table max and wallet balance
-        const maxTopUpAmount = Math.min(max - current, wallet);
+        const minTopUpAmount = calculateMinTopUp(current, min);
+        const maxTopUpAmount = calculateMaxTopUp(current, max, wallet);
 
         return {
             currentStackFormatted: current.toFixed(2),
