@@ -1314,7 +1314,7 @@ const Table = React.memo(() => {
                                     if (chipAmount === "0" || chipAmount === "" || !chipAmount) return null;
                                     return (
                                         <div key={`chip-${index}`} className="chip-position" style={{ left: position.left, bottom: position.bottom }}>
-                                            <Chip amount={chipAmount} />
+                                            <Chip amount={chipAmount} isTournament={isTournamentFormat(gameFormat)} />
                                         </div>
                                     );
                                 })}
