@@ -17,6 +17,7 @@ import { colors as _colors, hexToRgba as _hexToRgba } from "../../utils/colorCon
 import { microToUsdc } from "../../constants/currency";
 import { useGameStateContext } from "../../context/GameStateContext";
 import { getGameTypeMnemonic } from "../../utils/gameFormatUtils";
+import { isEmpty, hasElements, isBlank } from "../../utils/guards";
 
 import type { SitAndGoAutoJoinModalProps } from "./types";
 
@@ -124,7 +125,7 @@ const SitAndGoAutoJoinModal: React.FC<SitAndGoAutoJoinModalProps> = ({ tableId, 
         if (!publicKey || !tableId || isUserAlreadyPlaying || hasJoined) return;
 
         // Check if there are empty seats
-        if (emptySeatIndexes.length === 0) {
+        if (isEmpty(emptySeatIndexes)) {
             setBuyInError("No empty seats available");
             return;
         }
@@ -344,9 +345,9 @@ const SitAndGoAutoJoinModal: React.FC<SitAndGoAutoJoinModalProps> = ({ tableId, 
                     {/* Take Seat Button */}
                     <button
                         onClick={handleTakeSeat}
-                        disabled={isJoining || isBalanceLoading || balanceFormatted < parseFloat(maxBuyInFormatted) || emptySeatIndexes.length === 0}
+                        disabled={isJoining || isBalanceLoading || balanceFormatted < parseFloat(maxBuyInFormatted) || isEmpty(emptySeatIndexes)}
                         className={`w-full px-4 rounded-lg font-semibold text-white transition-all duration-300 ${isCompact ? "py-2 text-sm" : "py-3"} ${
-                            isJoining || isBalanceLoading || balanceFormatted < parseFloat(maxBuyInFormatted) || emptySeatIndexes.length === 0
+                            isJoining || isBalanceLoading || balanceFormatted < parseFloat(maxBuyInFormatted) || isEmpty(emptySeatIndexes)
                                 ? "bg-gray-600 cursor-not-allowed"
                                 : "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transform hover:scale-105"
                         }`}
@@ -367,7 +368,7 @@ const SitAndGoAutoJoinModal: React.FC<SitAndGoAutoJoinModalProps> = ({ tableId, 
                             "Loading..."
                         ) : balanceFormatted < parseFloat(maxBuyInFormatted) ? (
                             "Insufficient Balance"
-                        ) : emptySeatIndexes.length === 0 ? (
+                        ) : isEmpty(emptySeatIndexes) ? (
                             "Table Full"
                         ) : (
                             "Take My Seat"
